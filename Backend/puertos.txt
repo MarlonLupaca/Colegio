@@ -1,0 +1,39 @@
+=========================================================================
+PUERTOS ASIGNADOS A LOS MICROSERVICIOS - PROYECTO COLEGIO
+=========================================================================
+
+Servidores de Infraestructura:
+-----------------------------
+- eureka-server            : Port 8761 (Servidor de Descubrimiento)
+- api-gateway              : Port 8080 (Puerta de Enlace / Gateway Principal)
+- config-server            : Port 8888 (Servidor de Configuración Centralizada)
+
+Microservicios de Aplicación:
+----------------------------
+- auth-service             : Port 8081 (Servicio de Autenticación)
+- user-service             : Port 8082 (Servicio de Usuarios)
+- student-record-service   : Port 8083 (Registro de Estudiantes)
+- attendance-service       : Port 8084 (Asistencia)
+- announcement-service     : Port 8085 (Anuncios)
+- assignment-service       : Port 8086 (Tareas)
+- audit-service            : Port 8087 (Auditoría)
+- billing-service          : Port 8088 (Facturación)
+- course-service           : Port 8089 (Cursos)
+- enrollment-service       : Port 8090 (Matrículas)
+- exam-service             : Port 8091 (Exámenes)
+- grading-service          : Port 8092 (Calificaciones)
+- material-service         : Port 8093 (Material de Clase)
+- notification-service     : Port 8094 (Notificaciones)
+- receipt-service          : Port 8095 (Recibos / Pagos)
+- recovery-service         : Port 8096 (Recuperaciones)
+- report-service           : Port 8097 (Reportes / Boletines)
+- request-service          : Port 8098 (Solicitudes / Trámites)
+- schedule-service         : Port 8099 (Horarios)
+- section-service          : Port 8100 (Secciones / Aulas)
+- storage-service          : Port 8101 (Almacenamiento de Archivos)
+
+=========================================================================
+Nota: Recuerda que a través del api-gateway (Puerto 8080) puedes redirigir
+las llamadas a los servicios utilizando sus respectivos prefijos de ruta,
+por ejemplo: http://localhost:8080/api/user/prueba
+=========================================================================
