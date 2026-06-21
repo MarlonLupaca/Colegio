@@ -1,0 +1,66 @@
+# =========================================================================
+# GITIGNORE GENERAL - PROYECTO COLEGIO
+# =========================================================================
+
+# --- Personalizaciones y Reglas del Agente de IA (Antigravity) ---
+# Ignorar la carpeta de agentes y archivos de instrucciones de comportamiento/habilidades
+.agents/
+AGENTS.md
+SKILL.md
+
+# Ignorar archivos Markdown (.md) que usa la IA para aprender en el proyecto
+*.md
+# Descomenta la siguiente línea si quieres permitir el archivo README.md principal:
+# !README.md
+
+# --- Python ---
+# Archivos compilados y bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+*$py.class
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+# Si no deseas subir ningún archivo .py en absoluto, descomenta la siguiente línea:
+# *.py
+
+# --- Backend (Java / Maven / Gradle) ---
+# Carpetas de compilación y salida de Java
+**/target/
+**/build/
+**/out/
+.gradle/
+**/bin/
+*.class
+*.log
+*.jar
+*.war
+
+# --- Frontend (Node.js / React / Next.js / Vite) ---
+# Módulos de Node y compilaciones de Frontend
+**/node_modules/
+**/dist/
+**/.next/
+**/.nuxt/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- IDEs, Editores y Sistema ---
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.colegio</groupId>
+    <artifactId>colegio-backend-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>colegio-backend-parent</name>
+    <description>Root Aggregator POM to manage all microservices of the Colegio project</description>
+
+    <modules>
+        <module>announcement-service</module>
+        <module>api-gateway</module>
+        <module>assignment-service</module>
+        <module>attendance-service</module>
+        <module>audit-service</module>
+        <module>auth-service</module>
+        <module>billing-service</module>
+        <module>config-server</module>
+        <module>course-service</module>
+        <module>enrollment-service</module>
+        <module>eureka-server</module>
+        <module>exam-service</module>
+        <module>grading-service</module>
+        <module>material-service</module>
+        <module>notification-service</module>
+        <module>receipt-service</module>
+        <module>recovery-service</module>
+        <module>report-service</module>
+        <module>request-service</module>
+        <module>schedule-service</module>
+        <module>section-service</module>
+        <module>storage-service</module>
+        <module>student-record-service</module>
+        <module>user-service</module>
+    </modules>
+
+</project>
