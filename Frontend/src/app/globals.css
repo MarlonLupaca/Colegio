@@ -1,1 +1,14 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-bg-dark: #fdf5eb;
+  --color-card-dark: #ffffff;
+  --color-card-active: #f6ebe0;
+  --color-sidebar-bg: #e07a5f;
+  --color-primary-teal: #e07a5f;
+  --color-primary-hover: #c9664c;
+  --color-accent-indigo: #81b29a;
+  --color-text-primary: #3d342e;
+  --color-text-secondary: #8a7d75;
+  --color-accent-green: #10b981;
+}
