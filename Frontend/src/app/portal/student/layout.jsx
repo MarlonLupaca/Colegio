@@ -25,7 +25,7 @@ export default function StudentLayout({ children }) {
           />
 
           {/* Children holds the current page content */}
-          <div className="flex-1">{children}</div>
+          <div className="flex-1 relative">{children}</div>
         </main>
       </div>
     </div>
