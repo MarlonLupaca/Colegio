@@ -251,7 +251,7 @@ export default function AnnouncementBoard() {
               )}
 
               {/* Post Header */}
-              <div className="p-4 flex gap-3 items-center border-b border-gray-50">
+              <div className="p-4 pb-0 flex gap-3 items-center ">
                 <div
                   className={`w-10 h-10 rounded-full ${post.author.avatarBg} flex items-center justify-center font-bold text-white text-xs select-none`}
                 >
@@ -259,14 +259,14 @@ export default function AnnouncementBoard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    <h3 className="font-bold text-xs text-primary truncate hover:underline cursor-pointer">
+                    <h3 className="font-bold text-sm text-primary truncate hover:underline cursor-pointer">
                       {post.author.name}
                     </h3>
                     {post.author.isVerified && (
                       <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 fill-blue-500 shrink-0" />
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-400 font-medium leading-none mt-0.5">
+                  <p className="text-xs text-gray-400 font-medium leading-none mt-0.5">
                     {post.author.role} • {post.time}
                   </p>
                 </div>
@@ -279,7 +279,7 @@ export default function AnnouncementBoard() {
 
               {/* Post Body (Content Text) */}
               <div className="p-4 space-y-3">
-                <p className="text-xs text-[#031553] leading-relaxed whitespace-pre-line">{post.content}</p>
+                <p className="text-sm text-[#031553] leading-relaxed whitespace-pre-line">{post.content}</p>
               </div>
 
               {/* Optional Post Image */}
@@ -290,7 +290,7 @@ export default function AnnouncementBoard() {
               )}
 
               {/* Post Metrics Stats */}
-              <div className="px-4 py-2 flex items-center justify-between text-[10px] text-gray-400 font-semibold border-b border-gray-50">
+              <div className="px-4 py-2 flex items-center justify-between text-xs text-gray-400 font-semibold border-b border-gray-50">
                 <span className="flex items-center gap-1 hover:underline cursor-pointer">
                   <span className="bg-[#031553]/10 p-0.5 rounded-full flex items-center justify-center">
                     <Heart className="w-3 h-3 text-[#031553] fill-[#031553]" />
@@ -301,7 +301,7 @@ export default function AnnouncementBoard() {
               </div>
 
               {/* Action Buttons (Share Removed) */}
-              <div className="px-2 py-1 flex items-center justify-between text-xs font-bold text-gray-500 border-b border-gray-50">
+              <div className="px-2 py-1 flex items-center justify-between text-sm font-bold text-gray-500 border-b border-gray-50">
                 <button
                   onClick={() => handleLike(post.id)}
                   className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all cursor-pointer ${
@@ -331,10 +331,10 @@ export default function AnnouncementBoard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="bg-gray-100 rounded-2xl px-3.5 py-2 inline-block max-w-full text-left">
-                            <span className="font-bold text-[11px] text-primary block leading-none hover:underline cursor-pointer mb-1">
+                            <span className="font-bold text-xs text-primary block leading-none hover:underline cursor-pointer mb-1">
                               {comment.author}
                             </span>
-                            <p className="text-[11px] text-[#031553] leading-relaxed break-words">{comment.text}</p>
+                            <p className="text-xs text-[#031553] leading-relaxed break-words">{comment.text}</p>
                           </div>
                           <span className="text-[8px] text-gray-400 block ml-2 pt-0.5">{comment.time}</span>
                         </div>
@@ -354,7 +354,7 @@ export default function AnnouncementBoard() {
                       placeholder="Escribe un comentario..."
                       value={commentInputs[post.id] || ''}
                       onChange={(e) => setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))}
-                      className="flex-1 bg-transparent text-[11px] text-primary outline-none placeholder:text-gray-300"
+                      className="flex-1 bg-transparent text-xs text-primary outline-none placeholder:text-gray-300"
                     />
                     <button
                       type="submit"
@@ -370,7 +370,7 @@ export default function AnnouncementBoard() {
         </div>
 
         {/* Right Side: Interactive Monthly Calendar Card (Takes full space) */}
-        <div className="space-y-6 sticky top-0 left-0">
+        <div className="space-y-6 sticky top-21 left-0 h-fit">
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-5">
             {/* Calendar Controls */}
             <div className="flex items-center justify-between pb-2 border-b border-gray-50">

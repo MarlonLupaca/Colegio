@@ -14,7 +14,7 @@ export default function AdminLayout({ children }) {
         <Sidebar menuItems={adminMenuItems} portalTitle="Director" basePath="/portal/admin" />
 
         {/* Main Content Area */}
-        <main className="flex-1 px-8 flex flex-col h-full overflow-y-auto relative bg-bg-dark/15 rounded-l-[40px] bg-card-dark">
+        <main className="flex-1 px-4 flex flex-col h-full overflow-y-auto relative bg-bg-dark/15 rounded-l-[40px] bg-card-dark">
           {/* Dynamic Header */}
           <Header
             welcomeText="Consola de Control - Director"
@@ -25,7 +25,7 @@ export default function AdminLayout({ children }) {
           />
 
           {/* Children holds the current page content */}
-          <div className="flex-1">{children}</div>
+          <div className="flex-1 px-4">{children}</div>
         </main>
       </div>
     </div>

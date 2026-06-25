@@ -46,7 +46,7 @@ export default function Header({ welcomeText, userName, userCode, avatarText, se
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   return (
-    <header className="flex justify-between items-center mb-4  py-4 border-b border-gray-300 shrink-0 sticky top-0 bg-white z-20">
+    <header className="flex justify-between items-center mb-4  py-4 border-b border-gray-300 shrink-0 sticky top-0 bg-white z-20 px-4">
       {/* Left side: Welcome Message */}
       <div className="flex items-center gap-3">
         <h2 className="text-xl md:text-2xl font-bold tracking-tight text-text-primary">{welcomeText}</h2>
