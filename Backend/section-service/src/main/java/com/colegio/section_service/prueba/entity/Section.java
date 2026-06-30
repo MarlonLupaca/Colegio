@@ -2,9 +2,7 @@ package com.colegio.section_service.prueba.entity;
 
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.util.UUID;
@@ -18,17 +16,32 @@ public class Section {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "academic_year", nullable = false, length = 4)
-    @NotBlank(message = "El año académico es obligatorio")
-    private String academicYear;
+    @Column(name = "academic_year", nullable = false)
+    @NotNull(message = "El año académico es obligatorio")
+    @Min(2000) @Max(2100)
+    private Integer academicYear;
+
+    @Column(name = "education_level", nullable = false, length = 20)
+    @NotBlank(message = "El nivel educativo es obligatorio")
+    @Pattern(regexp = "primaria|secundaria", message = "Debe ser 'primaria' o 'secundaria'")
+    private String educationLevel;
+
+    @Column(name = "grade_level", nullable = false)
+    @NotNull(message = "El grado es obligatorio")
+    @Min(1) @Max(6)
+    private Integer gradeLevel;
+
+    @Column(name = "section_name", nullable = false, length = 5)
+    @NotBlank(message = "El nombre de sección es obligatorio")
+    @Pattern(regexp = "[A-Z]", message = "La sección debe ser una letra mayúscula (A, B, C...)")
+    private String sectionName;
 
     @Column(name = "max_students")
     @Min(1) @Max(40)
     private Integer maxStudents = 30;
 
-    @NotBlank(message = "El nombre de sección es obligatorio")
-    private String sectionName;
-
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 
 
 }
