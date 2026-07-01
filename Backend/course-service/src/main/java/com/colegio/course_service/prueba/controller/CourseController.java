@@ -26,15 +26,49 @@ public class CourseController {
         return courseService.getAllCourses();
     }
 
+    @GetMapping("/active")
+    public List<Course> getActiveCourses() {
+        return courseService.getActiveCourses();
+    }
+
+    @GetMapping("/inactive")
+    public List<Course> getInactiveCourses() {
+        return courseService.getInactiveCourses();
+    }
+
     @GetMapping("/{id}")
     public Course getCourseById(@PathVariable UUID id) {
         return courseService.getCourseById(id);
+    }
+
+    @GetMapping("/filter/education-level") //GET /api/v1/courses/filter/education-level?educationLevel=primaria
+    public List<Course> getCoursesByEducationLevel(
+            @RequestParam String educationLevel) {
+        return courseService.getCoursesByEducationLevel(educationLevel);
+    }
+
+    @GetMapping("/filter/education-level-and-grade")///api/v1/courses/filter/education-level-and-grade?educationLevel=primaria&gradeLevel=3
+    public List<Course> getCoursesByEducationLevelAndGrade(
+            @RequestParam String educationLevel,
+            @RequestParam Integer gradeLevel) {
+        return courseService.getCoursesByEducationLevelAndGrade(educationLevel, gradeLevel);
     }
 
     @PutMapping("/{id}")
     public Course updateCourse(@PathVariable UUID id, @Valid @RequestBody Course courseDetails) {
         return courseService.updateCourse(id, courseDetails);
     }
+
+    @PatchMapping("/{id}/activate")
+    public void activateCourse(@PathVariable UUID id) {
+        courseService.activateCourse(id);
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    public void deactivateCourse(@PathVariable UUID id) {
+        courseService.deactivateCourse(id);
+    }
+
 
     @DeleteMapping("/{id}")
     public void deleteCourse(@PathVariable UUID id) {

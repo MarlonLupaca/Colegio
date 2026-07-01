@@ -16,4 +16,10 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
     List<Course> findByEducationLevelAndGradeLevel(String educationLevel, Integer gradeLevel);
 
     List<Course> findByIsActiveTrue();
+
+    List<Course> findByIsActiveFalse();
+
+    List<Course> findByEducationLevelIgnoreCase(String educationLevel);
+
+    List<Course> findByEducationLevelIgnoreCaseAndGradeLevel(String educationLevel, Integer gradeLevel);
 }

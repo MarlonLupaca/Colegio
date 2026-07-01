@@ -19,4 +19,7 @@ public interface ClassScheduleRepository extends JpaRepository<ClassSchedule, UU
 
     boolean existsByTimeBlockIdAndDayOfWeekAndAssignedClassId(
             UUID timeBlockId, DayOfWeek dayOfWeek, UUID assignedClassId);
+
+    List<ClassSchedule> findByTimeBlockIdAndDayOfWeek(UUID timeBlockId, DayOfWeek dayOfWeek);
+
 }

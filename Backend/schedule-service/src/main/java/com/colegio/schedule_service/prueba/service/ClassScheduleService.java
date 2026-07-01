@@ -6,8 +6,10 @@ import com.colegio.schedule_service.prueba.repository.ClassScheduleRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -15,6 +17,11 @@ public class ClassScheduleService {
 
     @Autowired
     private ClassScheduleRepository classScheduleRepository;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    private static final String SECTION_SERVICE_URL = "http://localhost:8100/api/v1/assigned-classes/";
 
     public ClassSchedule createClassSchedule(ClassSchedule classSchedule) {
         boolean alreadyExists = classScheduleRepository
@@ -61,4 +68,46 @@ public class ClassScheduleService {
     public void deleteClassSchedule(UUID id) {
         classScheduleRepository.delete(getClassScheduleById(id));
     }
+
+    private UUID getTeacherIdFromAssignedClass(UUID assignedClassId) {
+        try {
+            Map response = restTemplate.getForObject(
+                    SECTION_SERVICE_URL + assignedClassId, Map.class);
+            if (response != null && response.get("teacherId") != null) {
+                return UUID.fromString(response.get("teacherId").toString());
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "No se pudo obtener el profesor de section-service: " + e.getMessage());
+        }
+        throw new IllegalStateException("teacherId no encontrado para la clase: " + assignedClassId);
+    }
+
+    private void validateNoOverlap(ClassSchedule classSchedule, UUID excludeId) {
+        List<ClassSchedule> sameBlockAndDay = classScheduleRepository
+                .findByTimeBlockIdAndDayOfWeek(
+                        classSchedule.getTimeBlock().getId(),
+                        classSchedule.getDayOfWeek()
+                );
+
+        UUID newTeacherId = getTeacherIdFromAssignedClass(classSchedule.getAssignedClassId());
+
+        for (ClassSchedule existing : sameBlockAndDay) {
+            if (excludeId != null && existing.getId().equals(excludeId)) continue;
+
+            // Choque de sección
+            if (existing.getAssignedClassId().equals(classSchedule.getAssignedClassId())) {
+                throw new IllegalArgumentException(
+                        "Esta sección ya tiene una clase asignada ese día en ese bloque horario.");
+            }
+
+            // Choque de profesor
+            UUID existingTeacherId = getTeacherIdFromAssignedClass(existing.getAssignedClassId());
+            if (existingTeacherId.equals(newTeacherId)) {
+                throw new IllegalArgumentException(
+                        "El profesor ya tiene una clase asignada ese día en ese bloque horario.");
+            }
+        }
+    }
+
 }
