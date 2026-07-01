@@ -24,7 +24,7 @@ public class Payment {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "charge_id")
-    private StudentCharge studentChage;
+    private StudentCharge studentCharge;
 
     @Column(name = "amount")
     private BigDecimal amount;

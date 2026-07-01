@@ -16,7 +16,7 @@ public class StudentChargeService {
 
     public List<StudentCharge> getCharges(){return chargeRepository.findAll();}
 
-    public List<StudentCharge> getChargesByStudent(Long id){return chargeRepository.findAllByStudent_Id(id);}
+    public List<StudentCharge> getChargesByStudent(Long id){return chargeRepository.findAllByStudentId(id);}
 
     public Optional<StudentCharge> getChargeById(Long id){return chargeRepository.findById(id);}
 

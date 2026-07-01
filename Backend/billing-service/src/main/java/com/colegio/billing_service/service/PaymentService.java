@@ -16,7 +16,7 @@ public class PaymentService {
 
     public List<Payment> getPayments(){return paymentRepository.findAll();}
 
-    public List<Payment> getPaymentByStudent(Long id){return paymentRepository.findAllByCharge_Id(id);}
+    public List<Payment> getPaymentByStudent(Long id){return paymentRepository.findAllByStudentCharge_Id(id);}
 
     public Optional<Payment> getPaymentById(Long id){return paymentRepository.findById(id);}
 
