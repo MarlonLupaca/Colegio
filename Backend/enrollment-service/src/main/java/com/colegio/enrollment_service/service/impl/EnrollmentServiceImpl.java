@@ -74,6 +74,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         return mapAdmissionToDTO(admissionRepository.save(app));
     }
 
+    @Autowired
+    private org.springframework.web.client.RestTemplate restTemplate;
+
     @Override
     @Transactional
     public EnrollmentDTO createEnrollment(EnrollmentDTO dto) {
@@ -88,6 +91,42 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 .condition(dto.getCondition() != null ? dto.getCondition() : "REGULAR")
                 .build();
         Enrollment saved = enrollmentRepository.save(entity);
+
+        // Generar Matrícula y Pensiones Automáticas en billing-service
+        try {
+            String billingUrl = "http://localhost:8080/api/v1/billing/charge";
+            int currentYear = java.time.LocalDate.now().getYear();
+
+            // 1. Cargo de Matrícula Única
+            java.util.Map<String, Object> matriculaPayload = new java.util.HashMap<>();
+            matriculaPayload.put("studentId", saved.getStudentId());
+            matriculaPayload.put("description", "Costo de Derecho de Matrícula " + currentYear);
+            matriculaPayload.put("totalAmount", new java.math.BigDecimal("350.00"));
+            matriculaPayload.put("pendingAmount", new java.math.BigDecimal("350.00"));
+            matriculaPayload.put("paidAmount", java.math.BigDecimal.ZERO);
+            matriculaPayload.put("dueDate", java.time.LocalDateTime.now().toString());
+            matriculaPayload.put("status", 0); // Ordinal de PENDING
+            restTemplate.postForObject(billingUrl, matriculaPayload, Object.class);
+
+            // 2. Cargos de Pensión Mensual (Marzo a Diciembre - 10 Cuotas)
+            String[] meses = {"Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
+            int[] dueMonths = {3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+
+            for (int i = 0; i < meses.length; i++) {
+                java.util.Map<String, Object> pensionPayload = new java.util.HashMap<>();
+                pensionPayload.put("studentId", saved.getStudentId());
+                pensionPayload.put("description", "Pensión Mensual de " + meses[i] + " " + currentYear);
+                pensionPayload.put("totalAmount", new java.math.BigDecimal("450.00"));
+                pensionPayload.put("pendingAmount", new java.math.BigDecimal("450.00"));
+                pensionPayload.put("paidAmount", java.math.BigDecimal.ZERO);
+                pensionPayload.put("dueDate", java.time.LocalDateTime.of(currentYear, dueMonths[i], 5, 23, 59).toString()); // Vence el 5 de cada mes
+                pensionPayload.put("status", 0); // Ordinal de PENDING
+                restTemplate.postForObject(billingUrl, pensionPayload, Object.class);
+            }
+        } catch (Exception e) {
+            System.err.println("No se pudo generar los cargos automáticos de pensión (billing-service no disponible): " + e.getMessage());
+        }
+
         return mapEnrollmentToDTO(saved);
     }
 
