@@ -1,6 +1,8 @@
 package com.colegio.section_service.prueba.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 
 import java.util.UUID;
@@ -10,8 +12,6 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
 public class AnnualSections {
 
     @Id
@@ -21,11 +21,17 @@ public class AnnualSections {
     @Column(name = "academic_year", nullable = false)
     private Integer academicYear;  // Ej: 2026, 2027
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "grade", nullable = false)
-    private String grade;  // Ej: "3ero de Primaria", "5to de Secundaria"
+    private EducationLevel educationLevel;  // Primaria", "Secundaria"
 
+    @Column(name = "grade_level", nullable = false)
+    @Min(1) @Max(6)
+    private Integer gradeLevel;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "section_letter", nullable = false)
-    private String sectionLetter;  // Ej: "A", "B", "C"
+    private SectionLetter sectionLetter; // Ej: "A", "B", "C"
 
     @ManyToOne
     @JoinColumn(name = "classroom_id", nullable = false)

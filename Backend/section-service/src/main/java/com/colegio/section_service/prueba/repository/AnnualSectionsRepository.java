@@ -1,6 +1,8 @@
 package com.colegio.section_service.prueba.repository;
 
 import com.colegio.section_service.prueba.entity.AnnualSections;
+import com.colegio.section_service.prueba.entity.EducationLevel;
+import com.colegio.section_service.prueba.entity.SectionLetter;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,12 +15,12 @@ public interface AnnualSectionsRepository extends JpaRepository<AnnualSections, 
 
     List<AnnualSections> findByAcademicYear(Integer academicYear);
 
-    List<AnnualSections> findByGrade(String grade);
+    List<AnnualSections> findByEducationLevel(EducationLevel educationLevel);
 
-    List<AnnualSections> findByAcademicYearAndGrade(Integer academicYear, String grade);
+    List<AnnualSections> findByAcademicYearAndEducationLevel(Integer academicYear, EducationLevel educationLevel);
 
-    Optional<AnnualSections> findByAcademicYearAndGradeAndSectionLetter(
-            Integer academicYear, String grade, String sectionLetter);
+    Optional<AnnualSections> findByAcademicYearAndEducationLevelAndSectionLetter(
+            Integer academicYear, EducationLevel educationLevel, SectionLetter sectionLetter);
 
 
 }

@@ -20,6 +20,11 @@ public class TimeBlockService {
         if (!timeBlock.getStartTime().isBefore(timeBlock.getEndTime())) {
             throw new IllegalArgumentException("La hora de inicio debe ser antes que la hora de fin");
         }
+
+        // Validar que no se cruce con otro bloque ya creado
+        if (timeBlockRepository.existsOverlappingBlock(timeBlock.getStartTime(), timeBlock.getEndTime(), null)) {
+            throw new IllegalArgumentException("El rango de horas se cruza con un bloque horario existente.");
+        }
         return timeBlockRepository.save(timeBlock);
     }
 
@@ -39,6 +44,10 @@ public class TimeBlockService {
     public TimeBlock updateTimeBlock(UUID id, TimeBlock details) {
         if (!details.getStartTime().isBefore(details.getEndTime())) {
             throw new IllegalArgumentException("La hora de inicio debe ser antes que la hora de fin");
+        }
+
+        if (timeBlockRepository.existsOverlappingBlock(details.getStartTime(), details.getEndTime(), id)) {
+            throw new IllegalArgumentException("El rango de horas se cruza con un bloque horario existente.");
         }
         TimeBlock timeBlock = getTimeBlockById(id);
         timeBlock.setStartTime(details.getStartTime());

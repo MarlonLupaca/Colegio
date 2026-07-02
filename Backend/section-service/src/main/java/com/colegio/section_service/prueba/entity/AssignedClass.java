@@ -20,7 +20,7 @@ public class AssignedClass {
     private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = "annual_section_id", nullable = false)
+    @JoinColumn(name = " annual_section_id", nullable = false)
     @NotNull(message = "La sección anual es obligatoria")
     private AnnualSections annualSection;
 

@@ -24,18 +24,8 @@ public class ClassScheduleService {
     private static final String SECTION_SERVICE_URL = "http://localhost:8100/api/v1/assigned-classes/";
 
     public ClassSchedule createClassSchedule(ClassSchedule classSchedule) {
-        boolean alreadyExists = classScheduleRepository
-                .existsByTimeBlockIdAndDayOfWeekAndAssignedClassId(
-                        classSchedule.getTimeBlock().getId(),
-                        classSchedule.getDayOfWeek(),
-                        classSchedule.getAssignedClassId()
-                );
-
-        if (alreadyExists) {
-            throw new IllegalArgumentException(
-                    "Ya existe un horario para esa clase en ese bloque y día.");
-        }
-
+        //alidaciones antes de guardar
+        validateNoOverlap(classSchedule, null);
         return classScheduleRepository.save(classSchedule);
     }
 
@@ -62,6 +52,8 @@ public class ClassScheduleService {
         classSchedule.setTimeBlock(details.getTimeBlock());
         classSchedule.setDayOfWeek(details.getDayOfWeek());
         classSchedule.setAssignedClassId(details.getAssignedClassId());
+
+        validateNoOverlap(classSchedule, id);
         return classScheduleRepository.save(classSchedule);
     }
 
@@ -84,24 +76,26 @@ public class ClassScheduleService {
     }
 
     private void validateNoOverlap(ClassSchedule classSchedule, UUID excludeId) {
-        List<ClassSchedule> sameBlockAndDay = classScheduleRepository
-                .findByTimeBlockIdAndDayOfWeek(
-                        classSchedule.getTimeBlock().getId(),
-                        classSchedule.getDayOfWeek()
-                );
+        // REGLA 1: Una misma clase asignada (salón-curso) no puede tener dos horarios el mismo día a la misma hora
+        List<ClassSchedule> sectionSchedules = classScheduleRepository
+                .findByTimeBlockIdAndDayOfWeek(classSchedule.getTimeBlock().getId(), classSchedule.getDayOfWeek());
 
-        UUID newTeacherId = getTeacherIdFromAssignedClass(classSchedule.getAssignedClassId());
-
-        for (ClassSchedule existing : sameBlockAndDay) {
+        for (ClassSchedule existing : sectionSchedules) {
             if (excludeId != null && existing.getId().equals(excludeId)) continue;
 
-            // Choque de sección
+            // Si el ID de la clase asignada es idéntico, es un choque real de salón
             if (existing.getAssignedClassId().equals(classSchedule.getAssignedClassId())) {
                 throw new IllegalArgumentException(
                         "Esta sección ya tiene una clase asignada ese día en ese bloque horario.");
             }
+        }
 
-            // Choque de profesor
+        // REGLA 2: Controlar que el profesor no se cruce
+        // Si necesitas hacerlo sí o sí por backend, asegúrate de que section-service tenga el endpoint: GET /api/v1/assigned-classes/{id}
+        UUID newTeacherId = getTeacherIdFromAssignedClass(classSchedule.getAssignedClassId());
+        for (ClassSchedule existing : sectionSchedules) {
+            if (excludeId != null && existing.getId().equals(excludeId)) continue;
+
             UUID existingTeacherId = getTeacherIdFromAssignedClass(existing.getAssignedClassId());
             if (existingTeacherId.equals(newTeacherId)) {
                 throw new IllegalArgumentException(

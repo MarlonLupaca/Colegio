@@ -1,6 +1,7 @@
 package com.colegio.section_service.prueba.service;
 
 import com.colegio.section_service.prueba.entity.AnnualSections;
+import com.colegio.section_service.prueba.entity.EducationLevel;
 import com.colegio.section_service.prueba.repository.AnnualSectionsRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +17,16 @@ public class AnnualSectionsService {
     private AnnualSectionsRepository annualSectionsRepository;
 
     public AnnualSections createAnnualSection(AnnualSections annualSection) {
-        annualSectionsRepository.findByAcademicYearAndGradeAndSectionLetter(
+        if (EducationLevel.SECUNDARIA.equals(annualSection.getEducationLevel()) && annualSection.getGradeLevel() > 5) {
+            throw new IllegalArgumentException("En el Perú, el nivel secundaria solo tiene hasta 5 grados.");
+        }
+        annualSectionsRepository.findByAcademicYearAndEducationLevelAndSectionLetter(
                 annualSection.getAcademicYear(),
-                annualSection.getGrade(),
+                annualSection.getEducationLevel(),
                 annualSection.getSectionLetter()
         ).ifPresent(s -> {
             throw new IllegalArgumentException(
-                    "Ya existe la sección " + annualSection.getGrade() +
+                    "Ya existe la sección " + annualSection.getEducationLevel() +
                             " \"" + annualSection.getSectionLetter() +
                             "\" para el año " + annualSection.getAcademicYear());
         });
@@ -42,20 +46,29 @@ public class AnnualSectionsService {
         return annualSectionsRepository.findByAcademicYear(academicYear);
     }
 
-    public List<AnnualSections> getByGrade(String grade) {
-        return annualSectionsRepository.findByGrade(grade);
+    // Cambiado a EducationLevel
+    public List<AnnualSections> getByEducationLevel(EducationLevel educationLevel) {
+        return annualSectionsRepository.findByEducationLevel(educationLevel);
     }
 
-    public List<AnnualSections> getByAcademicYearAndGrade(Integer academicYear, String grade) {
-        return annualSectionsRepository.findByAcademicYearAndGrade(academicYear, grade);
+    public List<AnnualSections> getByAcademicYearAndEducationLevel(Integer academicYear, EducationLevel educationLevel) {
+        return annualSectionsRepository.findByAcademicYearAndEducationLevel(academicYear, educationLevel);
     }
 
     public AnnualSections updateAnnualSection(UUID id, AnnualSections details) {
+
+        if (EducationLevel.SECUNDARIA.equals(details.getEducationLevel()) && details.getGradeLevel() > 5) {
+            throw new IllegalArgumentException("En el Perú, el nivel secundaria solo tiene hasta 5 grados.");
+        }
+
         AnnualSections section = getAnnualSectionById(id);
+
         section.setAcademicYear(details.getAcademicYear());
-        section.setGrade(details.getGrade());
+        section.setEducationLevel(details.getEducationLevel());
+        section.setGradeLevel(details.getGradeLevel());
         section.setSectionLetter(details.getSectionLetter());
         section.setClassroom(details.getClassroom());
+
         return annualSectionsRepository.save(section);
     }
 
@@ -76,7 +89,8 @@ public class AnnualSectionsService {
                 .map(prev -> {
                     AnnualSections newSection = new AnnualSections();
                     newSection.setAcademicYear(toYear);
-                    newSection.setGrade(prev.getGrade());
+                    newSection.setEducationLevel(prev.getEducationLevel());
+                    newSection.setGradeLevel(prev.getGradeLevel());
                     newSection.setSectionLetter(prev.getSectionLetter());
                     newSection.setClassroom(prev.getClassroom());
                     return annualSectionsRepository.save(newSection);

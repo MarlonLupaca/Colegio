@@ -1,6 +1,7 @@
 package com.colegio.section_service.prueba.controller;
 
 import com.colegio.section_service.prueba.entity.AnnualSections;
+import com.colegio.section_service.prueba.entity.EducationLevel;
 import com.colegio.section_service.prueba.service.AnnualSectionsService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,16 +37,18 @@ public class AnnualSectionsController {
         return annualSectionsService.getByAcademicYear(academicYear);
     }
 
-    @GetMapping("/grade/{grade}")
-    public List<AnnualSections> getByGrade(@PathVariable String grade) {
-        return annualSectionsService.getByGrade(grade);
+    // Cambiado el Path y el tipo de dato a EducationLevel
+    @GetMapping("/education-level/{educationLevel}")
+    public List<AnnualSections> getByEducationLevel(@PathVariable EducationLevel educationLevel) {
+        return annualSectionsService.getByEducationLevel(educationLevel);
     }
 
+    // Cambiado el RequestParam a EducationLevel
     @GetMapping("/filter")
-    public List<AnnualSections> getByYearAndGrade(
+    public List<AnnualSections> getByYearAndEducationLevel(
             @RequestParam Integer academicYear,
-            @RequestParam String grade) {
-        return annualSectionsService.getByAcademicYearAndGrade(academicYear, grade);
+            @RequestParam EducationLevel educationLevel) {
+        return annualSectionsService.getByAcademicYearAndEducationLevel(academicYear, educationLevel);
     }
 
     @PutMapping("/{id}")
@@ -66,5 +69,4 @@ public class AnnualSectionsController {
             @RequestParam Integer toYear) {
         return annualSectionsService.cloneFromYear(fromYear, toYear);
     }
-
 }
