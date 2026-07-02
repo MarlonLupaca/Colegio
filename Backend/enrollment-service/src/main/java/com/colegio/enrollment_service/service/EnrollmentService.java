@@ -19,4 +19,6 @@ public interface EnrollmentService {
     List<EnrollmentDTO> getEnrollmentsBySectionId(Long sectionId);
     EnrollmentDTO updateEnrollmentStatus(Long id, String status);
     void deleteEnrollment(Long id);
+    List<EnrollmentDTO> getAllEnrollments();
+    EnrollmentDTO getActiveEnrollment(Long studentId, Integer academicYear);
 }

@@ -18,8 +18,8 @@ export default function SectionTree({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedLevels, setExpandedLevels] = useState({
-    'primaria': true,
-    'secundaria': true
+    'primaria': false,
+    'secundaria': false
   });
 
   const toggleLevel = (level) => {

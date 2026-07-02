@@ -38,5 +38,11 @@ export const apiFetch = async (endpoint, options = {}) => {
     throw new Error(errorData.mensaje || 'Error en la petición al servidor');
   }
 
-  return response.json();
+  // Si la respuesta no tiene contenido (ej: HTTP 204 No Content) o está vacía
+  if (response.status === 204) {
+    return {};
+  }
+
+  const text = await response.text();
+  return text ? JSON.parse(text) : {};
 };

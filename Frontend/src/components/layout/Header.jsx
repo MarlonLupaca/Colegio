@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import { Search, Bell, X, BookOpen, FileText, Calendar, Award } from 'lucide-react';
 
+import { cookies } from '@/config/api';
+import { useEffect } from 'react';
+
 const mockNotifications = [
   {
     id: 1,
@@ -42,8 +45,31 @@ const mockNotifications = [
   },
 ];
 
-export default function Header({ welcomeText, userName, userCode, avatarText, searchPlaceholder = 'Buscar...' }) {
+export default function Header({ welcomeText, userName: propUserName, userCode: propUserCode, avatarText: propAvatarText, searchPlaceholder = 'Buscar...' }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [userName, setUserName] = useState(propUserName || 'Usuario');
+  const [userCode, setUserCode] = useState(propUserCode || '');
+  const [avatarText, setAvatarText] = useState(propAvatarText || 'US');
+
+  useEffect(() => {
+    const nameCookie = cookies.get('userName');
+    const codeCookie = cookies.get('userCode');
+
+    if (nameCookie) {
+      setUserName(nameCookie);
+      
+      // Extraer iniciales para el avatar
+      const parts = nameCookie.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        setAvatarText((parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase());
+      } else if (parts[0]) {
+        setAvatarText(parts[0].substring(0, 2).toUpperCase());
+      }
+    }
+    if (codeCookie) {
+      setUserCode(codeCookie);
+    }
+  }, [propUserName, propUserCode]);
 
   return (
     <header className="flex justify-between items-center mb-4  py-4 border-b border-gray-300 shrink-0 sticky top-0 bg-white z-20 px-4">
@@ -81,7 +107,7 @@ export default function Header({ welcomeText, userName, userCode, avatarText, se
           </div>
           <div className="hidden lg:block text-left select-none">
             <p className="text-xs font-bold text-text-primary">{userName}</p>
-            <p className="text-[10px] text-text-secondary">Código: {userCode}</p>
+            {userCode && <p className="text-[10px] text-text-secondary">Código: {userCode}</p>}
           </div>
         </div>
       </div>

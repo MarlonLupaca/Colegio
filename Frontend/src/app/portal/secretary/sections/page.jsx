@@ -245,6 +245,7 @@ export default function SectionsPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleNewSectionSubmit}
+          existingSections={sectionsGrouped}
         />
       )}
     </div>

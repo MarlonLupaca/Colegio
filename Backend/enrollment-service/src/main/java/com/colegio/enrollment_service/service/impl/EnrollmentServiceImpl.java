@@ -131,6 +131,20 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         enrollmentRepository.deleteById(id);
     }
 
+    @Override
+    public List<EnrollmentDTO> getAllEnrollments() {
+        return enrollmentRepository.findAll().stream()
+                .map(this::mapEnrollmentToDTO)
+                .toList();
+    }
+
+    @Override
+    public EnrollmentDTO getActiveEnrollment(Long studentId, Integer academicYear) {
+        return enrollmentRepository.findByStudentIdAndAcademicYear(studentId, academicYear)
+                .map(this::mapEnrollmentToDTO)
+                .orElse(null);
+    }
+
     private AdmissionApplicationDTO mapAdmissionToDTO(AdmissionApplication entity) {
         return AdmissionApplicationDTO.builder()
                 .id(entity.getId())

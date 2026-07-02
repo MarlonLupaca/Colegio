@@ -179,12 +179,50 @@ const calendarDays = [
   { day: null, hasEvent: false }, // Next month fill
 ];
 
+import { apiFetch } from '@/config/api';
+import { useEffect } from 'react';
+
 const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 export default function AnnouncementBoard() {
-  const [posts, setPosts] = useState(mockPosts);
+  const [posts, setPosts] = useState([]);
   const [selectedDay, setSelectedDay] = useState(14); // Default to first event day
   const [commentInputs, setCommentInputs] = useState({});
+
+  // Cargar anuncios de la base de datos real
+  useEffect(() => {
+    const loadAnnouncements = async () => {
+      try {
+        const data = await apiFetch('/api/v1/announcement');
+        const dbPosts = data ? data.map((ann) => ({
+          id: `db-${ann.id}`,
+          author: {
+            name: ann.authorName || 'Secretaría',
+            role: ann.authorRole || 'Comunicados',
+            avatar: ann.authorName ? ann.authorName.substring(0, 2).toUpperCase() : 'CU',
+            avatarBg: ann.authorAvatarBg || 'bg-[#031553]',
+            isVerified: true
+          },
+          time: ann.creationDate ? new Date(ann.creationDate).toLocaleDateString() : 'Reciente',
+          content: ann.content,
+          likes: ann.likes || 0,
+          hasLiked: false,
+          isPinned: ann.isPinned || false,
+          commentsList: []
+        })) : [];
+
+        // Ordenar posts de BD: primero los anclados
+        dbPosts.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
+        // Combinar: La Semana de la Ciencia (mockPosts[0]) siempre primero, y luego la BD
+        setPosts([mockPosts[0], ...dbPosts]);
+      } catch (err) {
+        console.error('Error cargando anuncios del backend:', err.message);
+        setPosts(mockPosts);
+      }
+    };
+    loadAnnouncements();
+  }, []);
 
   const handleLike = (postId) => {
     setPosts((prevPosts) =>
