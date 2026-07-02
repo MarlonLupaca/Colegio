@@ -1,4 +1,4 @@
-package com.colegio.api_gateway;
+package com.colegio.api_gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +15,7 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Orígenes permitidos (frontend local)
+        // Orígenes permitidos del frontend
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://localhost:3001",
@@ -28,16 +28,16 @@ public class CorsConfig {
                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
 
-        // Headers permitidos (todos)
+        // Cabeceras permitidas
         config.setAllowedHeaders(List.of("*"));
 
-        // Headers que el frontend puede leer
+        // Cabeceras expuestas al cliente
         config.setExposedHeaders(List.of("Authorization", "Content-Type"));
 
-        // Permitir envío de cookies / credenciales
+        // Permitir credenciales (cookies, auth headers)
         config.setAllowCredentials(true);
 
-        // Cache del preflight (1 hora)
+        // Duración del preflight cache (1 hora)
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -9,10 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface SectionRepository  extends JpaRepository<Section, UUID> {
-
-    // Buscar secciones por año académico
-    List<Section> findByAcademicYear(Integer academicYear);
+public interface SectionRepository  extends JpaRepository<Section, Long> {
 
     // Buscar secciones por nivel educativo
     List<Section> findByEducationLevel(String educationLevel);
@@ -23,8 +20,8 @@ public interface SectionRepository  extends JpaRepository<Section, UUID> {
     // Buscar por grado y sección
     Section findByGradeLevelAndSectionName(Integer gradeLevel, String sectionName);
 
-    Optional<Section> findByAcademicYearAndEducationLevelAndGradeLevelAndSectionName(
-            Integer academicYear, String educationLevel, Integer gradeLevel, String sectionName);
+    Optional<Section> findByEducationLevelAndGradeLevelAndSectionName(
+            String educationLevel, Integer gradeLevel, String sectionName);
 
 
 }

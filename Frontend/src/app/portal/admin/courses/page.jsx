@@ -1,235 +1,566 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { BookOpen, Plus, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  BookOpen,
+  Search,
+  Plus,
+  Edit3,
+  Trash2,
+  Clock,
+  GraduationCap,
+  X,
+  Save
+} from 'lucide-react';
+import { apiFetch } from '@/config/api';
+import { useToast } from '@/context/ToastContext';
+import { useConfirmation } from '@/context/ConfirmationContext';
 
-import { initialCourses } from './data';
-import CourseFilters from './components/CourseFilters';
-import CourseTable from './components/CourseTable';
-import CourseMobileList from './components/CourseMobileList';
-import CourseModal from './components/CourseModal';
-import DeleteConfirmationModal from './components/DeleteConfirmationModal';
-import ToastNotification from './components/ToastNotification';
-
-// ─── Storage helpers ──────────────────────────────────────────────────────────
-const STORAGE_KEY = 'admin_courses';
-
-const loadCourses = () => {
-  if (typeof window === 'undefined') return initialCourses;
-  const saved = localStorage.getItem(STORAGE_KEY);
-  return saved ? JSON.parse(saved) : initialCourses;
-};
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminCoursesPage() {
-  const router = useRouter();
+  const { showToast } = useToast();
+  const { askConfirmation } = useConfirmation();
 
-  // ── Data
-  const [courses, setCourses] = useState(loadCourses);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
-  }, [courses]);
-
-  // ── Toast (declared early so resetFilters can reference it)
-  const [toast, setToast] = useState(null);
-
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  }, []);
-
-  // ── Filters
+  const [courses, setCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
-  const [levelFilter, setLevelFilter] = useState('todos');
-  const [gradeFilter, setGradeFilter] = useState('todos');
+  const [loading, setLoading] = useState(false);
+  
+  // Modales
+  const [isNewOpen, setIsNewOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
-  const resetFilters = useCallback(() => {
-    setSearchTerm('');
-    setStatusFilter('todos');
-    setLevelFilter('todos');
-    setGradeFilter('todos');
-    showToast('Filtros reiniciados', 'info');
-  }, [showToast]);
-
-  const filteredCourses = courses.filter((c) => {
-    const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = statusFilter === 'todos' ||
-      (statusFilter === 'activos' && c.isActive) ||
-      (statusFilter === 'inactivos' && !c.isActive);
-    const matchLevel = levelFilter === 'todos' || c.educationLevel === levelFilter;
-    const matchGrade = gradeFilter === 'todos' || c.gradeLevel === parseInt(gradeFilter);
-    return matchSearch && matchStatus && matchLevel && matchGrade;
+  // Formulario de creación
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    educationLevel: 'primaria',
+    gradeLevel: 1,
+    academicArea: 'matematica',
+    hoursPerWeek: 4
   });
 
-  // ── Form modal
-  const [formModal, setFormModal] = useState({ isOpen: false, type: 'create', course: null });
+  // Formulario de edición
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    description: '',
+    educationLevel: 'primaria',
+    gradeLevel: 1,
+    academicArea: 'matematica',
+    hoursPerWeek: 4
+  });
 
-  const openCreate = () => setFormModal({ isOpen: true, type: 'create', course: null });
-  const openEdit = (course) => setFormModal({ isOpen: true, type: 'edit', course });
-  const closeForm = () => setFormModal((prev) => ({ ...prev, isOpen: false }));
-
-  const handleFormSubmit = (formData) => {
-    const now = new Date().toISOString();
-    if (formModal.type === 'create') {
-      const newCourse = {
-        id: crypto.randomUUID(),
-        ...formData,
-        code: formData.code.toUpperCase().trim(),
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        gradeLevel: parseInt(formData.gradeLevel),
-        hoursPerWeek: parseInt(formData.hoursPerWeek),
-        createdAt: now,
-        updatedAt: now,
-      };
-      setCourses((prev) => [newCourse, ...prev]);
-      showToast(`Curso "${newCourse.name}" creado con éxito`);
-    } else {
-      setCourses((prev) =>
-        prev.map((c) =>
-          c.id === formModal.course.id
-            ? {
-              ...c,
-              ...formData,
-              code: formData.code.toUpperCase().trim(),
-              name: formData.name.trim(),
-              description: formData.description.trim(),
-              gradeLevel: parseInt(formData.gradeLevel),
-              hoursPerWeek: parseInt(formData.hoursPerWeek),
-              updatedAt: now,
-            }
-            : c
-        )
-      );
-      showToast(`Curso "${formData.name.trim()}" actualizado correctamente`);
+  // Cargar cursos desde el backend
+  const fetchCourses = async () => {
+    try {
+      const data = await apiFetch('/api/v1/courses');
+      setCourses(data || []);
+    } catch (err) {
+      console.error('Error cargando cursos:', err.message);
     }
-    closeForm();
   };
 
-  // ── Delete modal
-  const [deleteModal, setDeleteModal] = useState({ isOpen: false, course: null });
+  useEffect(() => {
+    fetchCourses();
+  }, []);
 
-  const openDelete = (course) => setDeleteModal({ isOpen: true, course });
-  const closeDelete = () => setDeleteModal({ isOpen: false, course: null });
+  // Guardar un nuevo curso
+  const handleCreateCourse = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  const handleConfirmDelete = () => {
-    const { course } = deleteModal;
-    setCourses((prev) => prev.filter((c) => c.id !== course.id));
-    showToast(`Curso "${course.name}" eliminado correctamente`);
-    closeDelete();
+    try {
+      const result = await apiFetch('/api/v1/courses', {
+        method: 'POST',
+        body: JSON.stringify(formData)
+      });
+
+      showToast(`Curso '${result.name}' registrado con éxito.`, 'success');
+      fetchCourses();
+      setIsNewOpen(false);
+      
+      setFormData({
+        name: '',
+        description: '',
+        educationLevel: 'primaria',
+        gradeLevel: 1,
+        academicArea: 'matematica',
+        hoursPerWeek: 4
+      });
+
+    } catch (err) {
+      showToast(err.message || 'Error al registrar el curso.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ── Toggle active
-  const handleToggleActive = (course) => {
-    const next = !course.isActive;
-    setCourses((prev) =>
-      prev.map((c) =>
-        c.id === course.id ? { ...c, isActive: next, updatedAt: new Date().toISOString() } : c
-      )
-    );
-    showToast(
-      `Curso "${course.name}" ${next ? 'activado' : 'desactivado'} con éxito`,
-      next ? 'success' : 'info'
-    );
+  // Guardar modificaciones del curso
+  const handleUpdateCourse = async (e) => {
+    e.preventDefault();
+    
+    const isConfirmed = await askConfirmation({
+      title: 'Modificar Curso',
+      message: '¿Está seguro de que desea guardar los cambios en la estructura de este curso?',
+      confirmLabel: 'Guardar',
+      cancelLabel: 'Cancelar'
+    });
+
+    if (!isConfirmed) return;
+    setLoading(true);
+
+    try {
+      await apiFetch(`/api/v1/courses/${selectedCourse.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(editFormData)
+      });
+
+      showToast('Estructura de curso actualizada correctamente.', 'success');
+      fetchCourses();
+      setIsEditOpen(false);
+      setSelectedCourse(null);
+    } catch (err) {
+      showToast(err.message || 'Error al actualizar el curso.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // Alternar el estado Activo/Inactivo (PATCH)
+  const toggleCourseStatus = async (course) => {
+    const action = course.isActive ? 'deactivate' : 'activate';
+    const actionLabel = course.isActive ? 'desactivar' : 'activar';
+
+    const isConfirmed = await askConfirmation({
+      title: `${actionLabel.toUpperCase()} CURSO`,
+      message: `¿Está seguro de que desea ${actionLabel} el curso '${course.name}'?`,
+      confirmLabel: actionLabel.charAt(0).toUpperCase() + actionLabel.slice(1),
+      cancelLabel: 'Cancelar'
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      await apiFetch(`/api/v1/courses/${course.id}/${action}`, {
+        method: 'PATCH'
+      });
+
+      showToast(`Curso ${course.isActive ? 'desactivado' : 'activado'} correctamente.`, 'success');
+      fetchCourses();
+    } catch (err) {
+      showToast(err.message || 'Error al cambiar estado del curso.', 'error');
+    }
+  };
+
+  // Eliminar físicamente un curso (DELETE)
+  const handleDeleteCourse = async (course) => {
+    const isConfirmed = await askConfirmation({
+      title: 'ELIMINAR CURSO DEFINITIVAMENTE',
+      message: `¿Está seguro de que desea borrar de forma permanente el curso '${course.name}'?`,
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar'
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      await apiFetch(`/api/v1/courses/${course.id}`, {
+        method: 'DELETE'
+      });
+
+      showToast('Curso eliminado correctamente.', 'success');
+      fetchCourses();
+    } catch (err) {
+      showToast(err.message || 'Error al eliminar el curso.', 'error');
+    }
+  };
+
+  // Filtrar cursos
+  const filteredCourses = courses.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.academicArea.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="w-full pb-12 space-y-6 animate-fade-in relative">
-
-      <ToastNotification toast={toast} />
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-        <div className="space-y-1.5 text-left">
-          <button
-            onClick={() => router.push('/portal/admin')}
-            className="flex items-center gap-1.5 text-[10px] font-bold text-secondary hover:text-primary transition-colors cursor-pointer select-none"
-          >
-            <ArrowLeft className="w-3 h-3" />
-            <span>Volver a Inicio</span>
-          </button>
+    <div className="w-full animate-fade-in pb-12 space-y-6 text-xs text-[#031553]">
+      
+      {/* Header Banner */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-primary/5 rounded-xl text-primary">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-primary tracking-tight">Gestión de Cursos</h2>
-              <p className="text-xs text-secondary mt-0.5">Administra las asignaturas dictadas, niveles, grados y estados.</p>
-            </div>
+            <span className="p-2 bg-[#031553]/10 rounded-xl text-[#031553]">
+              <BookOpen className="w-6 h-6" />
+            </span>
+            <h1 className="text-xl font-bold text-[#031553]">Plan Curricular y Cursos</h1>
           </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Definición de asignaturas, áreas académicas, cargas horarias y niveles de la institución.
+          </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md transition-all hover:scale-[1.02] cursor-pointer select-none shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Agregar Curso</span>
-        </button>
-      </div>
 
-      {/* Filters */}
-      <CourseFilters
-        searchTerm={searchTerm} setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-        levelFilter={levelFilter} setLevelFilter={setLevelFilter}
-        gradeFilter={gradeFilter} setGradeFilter={setGradeFilter}
-        resetFilters={resetFilters}
-      />
-
-      {/* Course list */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        {filteredCourses.length > 0 ? (
-          <>
-            <CourseTable
-              courses={filteredCourses}
-              onEdit={openEdit}
-              onDelete={openDelete}
-              onToggleActive={handleToggleActive}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 md:w-64">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar curso por código o área..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#031553] text-[#031553]"
             />
-            <CourseMobileList
-              courses={filteredCourses}
-              onEdit={openEdit}
-              onDelete={openDelete}
-              onToggleActive={handleToggleActive}
-            />
-          </>
-        ) : (
-          <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
-            <div className="p-4 bg-gray-50 rounded-full text-secondary/40">
-              <BookOpen className="w-8 h-8" />
-            </div>
-            <h4 className="font-bold text-primary text-sm">No se encontraron cursos</h4>
-            <p className="text-xs text-secondary max-w-xs">
-              Intenta cambiar los filtros o agrega un nuevo curso para comenzar.
-            </p>
-            <button onClick={resetFilters} className="text-xs font-bold text-primary hover:underline">
-              Restablecer Filtros
-            </button>
           </div>
-        )}
+          
+          <button
+            onClick={() => setIsNewOpen(true)}
+            className="flex items-center gap-2 bg-[#031553] hover:bg-[#020d36] text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" /> Crear Curso
+          </button>
+        </div>
       </div>
 
-      {/* Modals */}
-      <CourseModal
-        key={`${formModal.type}-${formModal.course?.id ?? 'new'}`}
-        isOpen={formModal.isOpen}
-        onClose={closeForm}
-        onSubmit={handleFormSubmit}
-        formType={formModal.type}
-        currentCourse={formModal.course}
-        courses={courses}
-      />
-      <DeleteConfirmationModal
-        isOpen={deleteModal.isOpen}
-        onClose={closeDelete}
-        onConfirm={handleConfirmDelete}
-        course={deleteModal.course}
-      />
+      {/* Cursos Table List */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50/75 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                <th className="py-3.5 px-6">Código / Asignatura</th>
+                <th className="py-3.5 px-6">Área Académica</th>
+                <th className="py-3.5 px-6">Nivel Educativo</th>
+                <th className="py-3.5 px-6">Grado</th>
+                <th className="py-3.5 px-6">Horas/Semana</th>
+                <th className="py-3.5 px-6">Estado</th>
+                <th className="py-3.5 px-6 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 text-xs">
+              {filteredCourses.map((c) => (
+                <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="py-4 px-6">
+                    <div>
+                      <div className="font-bold text-[#031553] text-sm">{c.name}</div>
+                      <div className="text-[10px] text-gray-400 font-bold font-mono mt-0.5">{c.code}</div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 font-semibold text-gray-600 capitalize">
+                    {c.academicArea?.replace('_', ' ')}
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="capitalize font-bold text-gray-600 flex items-center gap-1">
+                      <GraduationCap className="w-3.5 h-3.5 text-indigo-400" /> {c.educationLevel}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6 font-bold text-gray-600">
+                    {c.gradeLevel} Grado
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold text-gray-600">
+                      <Clock className="w-3 h-3" /> {c.hoursPerWeek} hrs
+                    </span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <button
+                      onClick={() => toggleCourseStatus(c)}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                        c.isActive
+                          ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
+                          : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100'
+                      }`}
+                    >
+                      {c.isActive ? 'Activo' : 'Inactivo'}
+                    </button>
+                  </td>
+                  <td className="py-4 px-6 text-right">
+                    <div className="inline-flex gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSelectedCourse(c);
+                          setEditFormData({
+                            name: c.name,
+                            description: c.description || '',
+                            educationLevel: c.educationLevel,
+                            gradeLevel: c.gradeLevel,
+                            academicArea: c.academicArea,
+                            hoursPerWeek: c.hoursPerWeek
+                          });
+                          setIsEditOpen(true);
+                        }}
+                        className="bg-gray-100 hover:bg-[#031553] hover:text-white text-[#031553] p-2 rounded-xl transition-all cursor-pointer border border-gray-200/40"
+                        title="Editar estructura"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCourse(c)}
+                        className="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition-all cursor-pointer border border-rose-100"
+                        title="Borrar curso"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredCourses.length === 0 && (
+                <tr>
+                  <td colSpan="7" className="text-center py-12 text-gray-400">
+                    No se encontraron asignaturas registradas.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal: Registrar Asignatura */}
+      {isNewOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleCreateCourse} className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
+            <div className="bg-[#031553] text-white p-5 flex justify-between items-center">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4" /> Registrar Curso en Plan Curricular
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsNewOpen(false)}
+                className="text-white/70 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="block text-gray-400 font-bold mb-1">Nombre del Curso</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="Ej: Álgebra y Lógica"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 font-bold mb-1">Área Curricular</label>
+                <select
+                  value={formData.academicArea}
+                  onChange={(e) => setFormData({ ...formData, academicArea: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553] capitalize"
+                >
+                  <option value="matematica">Matemática</option>
+                  <option value="comunicacion">Comunicación</option>
+                  <option value="ciencia_tecnologia">Ciencia y Tecnología</option>
+                  <option value="ciencias_sociales">Ciencias Sociales</option>
+                  <option value="desarrollo_personal_civica">Desarrollo Personal y Cívica</option>
+                  <option value="educacion_fisica">Educación Física</option>
+                  <option value="arte_cultura">Arte y Cultura</option>
+                  <option value="ingles">Inglés</option>
+                  <option value="educacion_religiosa">Educación Religiosa</option>
+                  <option value="educacion_trabajo">Educación para el Trabajo</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-gray-400 font-bold mb-1">Nivel</label>
+                  <select
+                    value={formData.educationLevel}
+                    onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value })}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553] capitalize"
+                  >
+                    <option value="primaria">Primaria</option>
+                    <option value="secundaria">Secundaria</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-400 font-bold mb-1">Grado</label>
+                  <select
+                    value={formData.gradeLevel}
+                    onChange={(e) => setFormData({ ...formData, gradeLevel: parseInt(e.target.value) })}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  >
+                    <option value="1">1er Grado</option>
+                    <option value="2">2do Grado</option>
+                    <option value="3">3er Grado</option>
+                    <option value="4">4to Grado</option>
+                    <option value="5">5to Grado</option>
+                    <option value="6">6to Grado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-400 font-bold mb-1">Horas/Semana</label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    max="15"
+                    value={formData.hoursPerWeek}
+                    onChange={(e) => setFormData({ ...formData, hoursPerWeek: parseInt(e.target.value) })}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-400 font-bold mb-1">Descripción (Opcional)</label>
+                <textarea
+                  placeholder="Sumilla o temario del curso..."
+                  rows="3"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553] resize-none"
+                />
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 flex justify-end gap-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsNewOpen(false)}
+                className="px-4 py-2 text-gray-500 font-semibold hover:bg-gray-100 rounded-xl transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-[#031553] text-white font-semibold px-5 py-2 rounded-xl shadow hover:bg-[#020d36] transition-all cursor-pointer disabled:opacity-50"
+              >
+                {loading ? 'Guardando...' : 'Crear Asignatura'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal: Editar Asignatura */}
+      {isEditOpen && selectedCourse && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleUpdateCourse} className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
+            <div className="bg-[#031553] text-white p-5 flex justify-between items-center">
+              <h3 className="font-bold text-sm flex items-center gap-1.5">
+                <Edit3 className="w-4 h-4" /> Modificar Estructura de Asignatura
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditOpen(false);
+                  setSelectedCourse(null);
+                }}
+                className="text-white/70 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="block text-gray-400 font-bold mb-1">Nombre del Curso</label>
+                <input
+                  required
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 font-bold mb-1">Área Curricular</label>
+                <select
+                  value={editFormData.academicArea}
+                  onChange={(e) => setEditFormData({ ...editFormData, academicArea: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553] capitalize"
+                >
+                  <option value="matematica">Matemática</option>
+                  <option value="comunicacion">Comunicación</option>
+                  <option value="ciencia_tecnologia">Ciencia y Tecnología</option>
+                  <option value="ciencias_sociales">Ciencias Sociales</option>
+                  <option value="desarrollo_personal_civica">Desarrollo Personal y Cívica</option>
+                  <option value="educacion_fisica">Educación Física</option>
+                  <option value="arte_cultura">Arte y Cultura</option>
+                  <option value="ingles">Inglés</option>
+                  <option value="educacion_religiosa">Educación Religiosa</option>
+                  <option value="educacion_trabajo">Educación para el Trabajo</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-gray-400 font-bold mb-1">Nivel</label>
+                  <select
+                    value={editFormData.educationLevel}
+                    onChange={(e) => setEditFormData({ ...editFormData, educationLevel: e.target.value })}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553] capitalize"
+                  >
+                    <option value="primaria">Primaria</option>
+                    <option value="secundaria">Secundaria</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-400 font-bold mb-1">Grado</label>
+                  <select
+                    value={editFormData.gradeLevel}
+                    onChange={(e) => setEditFormData({ ...editFormData, gradeLevel: parseInt(e.target.value) })}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  >
+                    <option value="1">1er Grado</option>
+                    <option value="2">2do Grado</option>
+                    <option value="3">3er Grado</option>
+                    <option value="4">4to Grado</option>
+                    <option value="5">5to Grado</option>
+                    <option value="6">6to Grado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-400 font-bold mb-1">Horas/Semana</label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    max="15"
+                    value={editFormData.hoursPerWeek}
+                    onChange={(e) => setEditFormData({ ...editFormData, hoursPerWeek: parseInt(e.target.value) })}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-400 font-bold mb-1">Descripción (Opcional)</label>
+                <textarea
+                  placeholder="Sumilla o temario del curso..."
+                  rows="3"
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553] resize-none"
+                />
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 flex justify-end gap-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditOpen(false);
+                  setSelectedCourse(null);
+                }}
+                className="px-4 py-2 text-gray-500 font-semibold hover:bg-gray-100 rounded-xl transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-[#031553] text-white font-semibold px-5 py-2 rounded-xl shadow hover:bg-[#020d36] transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" /> {loading ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
     </div>
   );
 }

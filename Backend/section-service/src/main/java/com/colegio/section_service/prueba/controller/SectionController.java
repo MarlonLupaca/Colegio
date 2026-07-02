@@ -11,7 +11,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/sections")
-@CrossOrigin(origins = "*")
 public class SectionController {
 
     @Autowired
@@ -25,7 +24,7 @@ public class SectionController {
 
     // Obtener sección por ID
     @GetMapping("/{id}")
-    public Section getSectionById(@PathVariable UUID id) {
+    public Section getSectionById(@PathVariable Long id) {
         return sectionService.getSectionById(id);
     }
 
@@ -38,34 +37,21 @@ public class SectionController {
     // Actualizar sección
     @PutMapping("/{id}")
     public Section updateSection(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @Valid @RequestBody Section sectionDetails) {
         return sectionService.updateSection(id, sectionDetails);
     }
 
     // Eliminar sección
     @DeleteMapping("/{id}")
-    public void deleteSection(@PathVariable UUID id) {
+    public void deleteSection(@PathVariable Long id) {
         sectionService.deleteSection(id);
-    }
-
-    // Obtener secciones por año académico
-    @GetMapping("/year/{academicYear}")
-    public List<Section> getSectionsByYear(@PathVariable Integer academicYear) {
-        return sectionService.getSectionsByYear(academicYear);
     }
 
     // Obtener secciones activas
     @GetMapping("/active")
     public List<Section> getActiveSections() {
         return sectionService.getActiveSections();
-    }
-
-    @PostMapping("/clone")
-    public List<Section> cloneSections(
-            @RequestParam Integer fromYear,
-            @RequestParam Integer toYear) {
-        return sectionService.cloneSectionsFromYear(fromYear, toYear);
     }
 
 }

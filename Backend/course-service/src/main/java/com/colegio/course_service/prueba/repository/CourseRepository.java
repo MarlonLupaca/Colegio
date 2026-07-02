@@ -12,6 +12,8 @@ import java.util.UUID;
 public interface CourseRepository extends JpaRepository<Course, UUID> {
 
     Optional<Course> findByCode(String code);
+    
+    Optional<Course> findFirstByCodeStartingWithOrderByCodeDesc(String prefix);
 
     List<Course> findByEducationLevelAndGradeLevel(String educationLevel, Integer gradeLevel);
 

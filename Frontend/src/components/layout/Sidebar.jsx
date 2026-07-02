@@ -5,12 +5,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import { LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 
+import { cookies } from '@/config/api';
+
 export default function Sidebar({ menuItems, portalTitle, basePath }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = () => {
+    cookies.delete('token'); // Eliminar la cookie del token JWT
     router.push('/login');
   };
 

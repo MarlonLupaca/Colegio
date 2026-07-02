@@ -22,6 +22,11 @@ public class PadreAlumnoController {
         return ResponseEntity.ok(padreAlumnoService.vincular(request));
     }
 
+    @GetMapping
+    public ResponseEntity<List<PadreAlumno>> listarTodos() {
+        return ResponseEntity.ok(padreAlumnoService.listarTodos());
+    }
+
     @GetMapping("/padre/{codigoPadre}")
     public ResponseEntity<List<PadreAlumno>> alumnosDePadre(@PathVariable String codigoPadre) {
         return ResponseEntity.ok(padreAlumnoService.obtenerAlumnosDePadre(codigoPadre));

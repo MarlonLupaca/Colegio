@@ -57,6 +57,10 @@ public class PadreAlumnoService {
         return padreAlumnoRepository.findByCodigoPadre(codigoPadre);
     }
 
+    public List<PadreAlumno> listarTodos() {
+        return padreAlumnoRepository.findAll();
+    }
+
     public List<PadreAlumno> obtenerPadresDeAlumno(String codigoAlumno) {
         return padreAlumnoRepository.findByCodigoAlumno(codigoAlumno);
     }
