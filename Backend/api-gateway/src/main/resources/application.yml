@@ -10,97 +10,57 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "http://localhost:3000"
+              - "http://localhost:3001"
+              - "http://localhost:5173"
+              - "http://127.0.0.1:*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            exposedHeaders:
+              - "Authorization"
+              - "Content-Type"
+            allowCredentials: true
+            maxAge: 3600
       routes:
         - id: auth-service
           uri: lb://auth-service
           predicates:
             - Path=/api/auth/**
-        - id: announcement-service
-          uri: lb://announcement-service
-          predicates:
-            - Path=/api/announcement/**
-        - id: assignment-service
-          uri: lb://assignment-service
-          predicates:
-            - Path=/api/assignment/**
-        - id: attendance-service
-          uri: lb://attendance-service
-          predicates:
-            - Path=/api/attendance/**
-        - id: audit-service
-          uri: lb://audit-service
-          predicates:
-            - Path=/api/audit/**
-        - id: billing-service
-          uri: lb://billing-service
-          predicates:
-            - Path=/api/billing/**
-        - id: course-service
-          uri: lb://course-service
-          predicates:
-            - Path=/api/course/**
-        - id: enrollment-service
-          uri: lb://enrollment-service
-          predicates:
-            - Path=/api/enrollment/**
-        - id: exam-service
-          uri: lb://exam-service
-          predicates:
-            - Path=/api/exam/**
-        - id: grading-service
-          uri: lb://grading-service
-          predicates:
-            - Path=/api/grading/**
-        - id: material-service
-          uri: lb://material-service
-          predicates:
-            - Path=/api/material/**
-        - id: notification-service
-          uri: lb://notification-service
-          predicates:
-            - Path=/api/notification/**
-        - id: receipt-service
-          uri: lb://receipt-service
-          predicates:
-            - Path=/api/receipt/**
-        - id: recovery-service
-          uri: lb://recovery-service
-          predicates:
-            - Path=/api/recovery/**
-        - id: report-service
-          uri: lb://report-service
-          predicates:
-            - Path=/api/report/**
-        - id: request-service
-          uri: lb://request-service
-          predicates:
-            - Path=/api/request/**
-        - id: schedule-service
-          uri: lb://schedule-service
-          predicates:
-            - Path=/api/schedule/**
-        - id: section-service
-          uri: lb://section-service
-          predicates:
-            - Path=/api/section/**
-        - id: storage-service
-          uri: lb://storage-service
-          predicates:
-            - Path=/api/storage/**
-        - id: student-record-service
-          uri: lb://student-record-service
-          predicates:
-            - Path=/api/student-record/**
+
         - id: user-service
           uri: lb://user-service
           predicates:
             - Path=/api/user/**
 
-# Eureka Client Configuration
+        - id: audit-service
+          uri: lb://audit-service
+          predicates:
+            - Path=/api/audit/**
+
+        - id: recovery-service
+          uri: lb://recovery-service
+          predicates:
+            - Path=/api/recovery/**
+
 eureka:
   client:
-    enabled: false
+    enabled: true
     service-url:
       defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
