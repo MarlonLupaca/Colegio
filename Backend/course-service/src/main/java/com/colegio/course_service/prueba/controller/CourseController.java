@@ -47,7 +47,7 @@ public class CourseController {
         return courseService.getCoursesByEducationLevel(educationLevel);
     }
 
-    @GetMapping("/filter/education-level-and-grade")///api/v1/courses/filter/education-level-and-grade?educationLevel=primaria&gradeLevel=3
+    @GetMapping("/filter/education-level-and-grade")//api/v1/courses/filter/education-level-and-grade?educationLevel=primaria&gradeLevel=3
     public List<Course> getCoursesByEducationLevelAndGrade(
             @RequestParam String educationLevel,
             @RequestParam Integer gradeLevel) {
