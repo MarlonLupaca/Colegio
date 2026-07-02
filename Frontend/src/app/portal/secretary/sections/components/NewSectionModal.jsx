@@ -61,12 +61,14 @@ export default function NewSectionModal({
       newErrors.maxStudents = 'La capacidad debe ser mayor a 0';
     }
 
-    // Validar duplicado en la UI (si ya existe grado y letra en el mismo nivel)
-    const exists = Object.values(existingSections).some(levelData => {
+    // Validar duplicado de forma segura contra la lista existente
+    const sectionsObj = existingSections || {};
+    const exists = Object.values(sectionsObj).some(levelData => {
+      if (!levelData) return false;
       return Object.values(levelData).some(section => {
         return section.grade === parseInt(formData.grade) && 
                section.section === formData.section &&
-               section.level.toLowerCase() === formData.level.toLowerCase();
+               section.level?.toLowerCase() === formData.level?.toLowerCase();
       });
     });
 
@@ -91,7 +93,24 @@ export default function NewSectionModal({
     onClose();
   };
 
-  const activeGrades = formData.level === 'primaria' ? grades.primaria : grades.secundaria;
+  const PRIMARIA_GRADES = [
+    { value: '1', label: '1° Grado de Primaria' },
+    { value: '2', label: '2° Grado de Primaria' },
+    { value: '3', label: '3° Grado de Primaria' },
+    { value: '4', label: '4° Grado de Primaria' },
+    { value: '5', label: '5° Grado de Primaria' },
+    { value: '6', label: '6° Grado de Primaria' },
+  ];
+
+  const SECUNDARIA_GRADES = [
+    { value: '1', label: '1° Año de Secundaria' },
+    { value: '2', label: '2° Año de Secundaria' },
+    { value: '3', label: '3° Año de Secundaria' },
+    { value: '4', label: '4° Año de Secundaria' },
+    { value: '5', label: '5° Año de Secundaria' },
+  ];
+
+  const activeGrades = formData.level === 'primaria' ? PRIMARIA_GRADES : SECUNDARIA_GRADES;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">

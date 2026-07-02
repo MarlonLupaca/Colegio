@@ -21,6 +21,11 @@ public class EnrollmentController {
         return new ResponseEntity<>(enrollmentService.createEnrollment(dto), HttpStatus.CREATED);
     }
 
+    @GetMapping
+    public ResponseEntity<List<EnrollmentDTO>> getAllEnrollments() {
+        return ResponseEntity.ok(enrollmentService.getAllEnrollments());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<EnrollmentDTO> getEnrollmentById(@PathVariable Long id) {
         return ResponseEntity.ok(enrollmentService.getEnrollmentById(id));
@@ -29,6 +34,18 @@ public class EnrollmentController {
     @GetMapping("/student/{studentId}")
     public ResponseEntity<List<EnrollmentDTO>> getByStudentId(@PathVariable Long studentId) {
         return ResponseEntity.ok(enrollmentService.getEnrollmentsByStudentId(studentId));
+    }
+
+    @GetMapping("/student/{studentId}/active")
+    public ResponseEntity<EnrollmentDTO> getActiveEnrollment(
+            @PathVariable Long studentId,
+            @RequestParam(required = false) Integer year) {
+        int queryYear = (year != null) ? year : java.time.LocalDate.now().getYear();
+        EnrollmentDTO active = enrollmentService.getActiveEnrollment(studentId, queryYear);
+        if (active == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(active);
     }
 
     @GetMapping("/section/{sectionId}")

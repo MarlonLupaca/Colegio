@@ -20,16 +20,15 @@ public class AssignedClass {
     private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = " annual_section_id", nullable = false)
-    @NotNull(message = "La sección anual es obligatoria")
-    private AnnualSections annualSection;
+    @JoinColumn(name = "annual_section_id", nullable = false)
+    @NotNull(message = "La sección es obligatoria")
+    private Section annualSection;
 
     @Column(name = "course_id", nullable = false)
     @NotNull(message = "El curso es obligatorio")
-    private UUID courseId;
+    private Long courseId;
 
-    @Column(name = "teacher_id", nullable = false)
-    @NotNull(message = "El profesor es obligatorio")
-    private UUID teacherId;
+    @Column(name = "teacher_id", nullable = true)
+    private Long teacherId;
 
 }

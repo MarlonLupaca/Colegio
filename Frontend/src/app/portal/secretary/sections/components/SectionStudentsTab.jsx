@@ -9,11 +9,13 @@ import {
   UserCheck
 } from 'lucide-react';
 import { apiFetch } from '@/config/api';
+import AddStudentsModal from './AddStudentsModal';
 
 export default function SectionStudentsTab({ section }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Cargar estudiantes oficiales matriculados en esta sección
   const fetchStudents = async () => {
@@ -73,7 +75,7 @@ export default function SectionStudentsTab({ section }) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-gray-100">
         <div>
           <h4 className="text-sm font-bold text-primary">
             Estudiantes Matriculados
@@ -82,7 +84,20 @@ export default function SectionStudentsTab({ section }) {
             {students.length} estudiantes en esta sección
           </p>
         </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-1 bg-[#031553] hover:bg-[#020d36] text-white text-[10px] font-bold py-2 px-4 rounded-xl shadow-xs transition-all cursor-pointer"
+        >
+          Inscribir Alumnos
+        </button>
       </div>
+
+      <AddStudentsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        sectionId={section.id}
+        onSuccess={fetchStudents}
+      />
 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-3">

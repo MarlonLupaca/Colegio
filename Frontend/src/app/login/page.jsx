@@ -49,6 +49,20 @@ export default function LoginPage() {
 
       // Guardar el token en la cookie
       cookies.set('token', data.token);
+
+      // Cargar información de perfil real
+      try {
+        const perfil = await apiFetch(`/api/user/usuarios/perfil/${username}`);
+        if (perfil) {
+          cookies.set('userName', `${perfil.nombres} ${perfil.apellidos}`);
+          cookies.set('userCode', perfil.codigoUsuario);
+        }
+      } catch (profileErr) {
+        console.warn("No se pudo cargar el perfil detallado:", profileErr.message);
+        // Fallback genérico si falla el user-service
+        cookies.set('userName', username);
+        cookies.set('userCode', username);
+      }
       
       // Guardar la bandera de cambio de contraseña obligatoria para la Demo
       localStorage.setItem('debeActualizarPassword', data.debeActualizarPassword.toString());

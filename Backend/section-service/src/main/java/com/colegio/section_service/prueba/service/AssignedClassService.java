@@ -39,15 +39,15 @@ public class AssignedClassService {
                         "Clase asignada no encontrada con ID: " + id));
     }
 
-    public List<AssignedClass> getByAnnualSection(UUID annualSectionId) {
+    public List<AssignedClass> getByAnnualSection(Long annualSectionId) {
         return assignedClassRepository.findByAnnualSectionId(annualSectionId);
     }
 
-    public List<AssignedClass> getByCourse(UUID courseId) {
+    public List<AssignedClass> getByCourse(Long courseId) {
         return assignedClassRepository.findByCourseId(courseId);
     }
 
-    public List<AssignedClass> getByTeacher(UUID teacherId) {
+    public List<AssignedClass> getByTeacher(Long teacherId) {
         return assignedClassRepository.findByTeacherId(teacherId);
     }
 
