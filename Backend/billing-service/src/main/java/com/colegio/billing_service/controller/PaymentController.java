@@ -1,7 +1,6 @@
 package com.colegio.billing_service.controller;
 
 import com.colegio.billing_service.model.Payment;
-import com.colegio.billing_service.model.StudentCharge;
 import com.colegio.billing_service.service.PaymentService;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Autowired;
