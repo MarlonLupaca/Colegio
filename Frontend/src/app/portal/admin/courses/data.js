@@ -1,0 +1,118 @@
+export const initialCourses = [
+  {
+    id: "e694b715-2bcf-4d2b-8de7-8cff9238ea14",
+    name: "Geometría",
+    code: "MAT-001",
+    academicArea: "matematica",
+    description: "Curso de geometría plana y del espacio para secundaria.",
+    educationLevel: "secundaria",
+    gradeLevel: 4,
+    hoursPerWeek: 6,
+    isActive: true,
+    createdAt: "2026-07-01T11:17:01.974406",
+    updatedAt: "2026-07-01T11:24:53.385028"
+  },
+  {
+    id: "a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+    name: "Aritmética y Álgebra",
+    code: "MAT-002",
+    academicArea: "matematica",
+    description: "Fundamentos de números reales, ecuaciones y funciones básicas.",
+    educationLevel: "secundaria",
+    gradeLevel: 1,
+    hoursPerWeek: 5,
+    isActive: true,
+    createdAt: "2026-06-15T09:00:00.000000",
+    updatedAt: "2026-06-15T09:00:00.000000"
+  },
+  {
+    id: "b2c3d4e5-6f7a-8b9c-0d1e-2f3a4b5c6d7e",
+    name: "Comprensión Lectora",
+    code: "COM-001",
+    academicArea: "comunicacion",
+    description: "Desarrollo de habilidades de lectura y redacción básica.",
+    educationLevel: "primaria",
+    gradeLevel: 3,
+    hoursPerWeek: 4,
+    isActive: true,
+    createdAt: "2026-06-20T10:30:00.000000",
+    updatedAt: "2026-06-20T10:30:00.000000"
+  },
+  {
+    id: "c3d4e5f6-7a8b-9c0d-1e2f-3a4b5c6d7e8f",
+    name: "Biología y Ecología",
+    code: "CTA-001",
+    academicArea: "ciencia_tecnologia",
+    description: "Estudio de los seres vivos, ecosistemas y cuidado ambiental.",
+    educationLevel: "secundaria",
+    gradeLevel: 3,
+    hoursPerWeek: 4,
+    isActive: false,
+    createdAt: "2026-06-25T08:15:00.000000",
+    updatedAt: "2026-06-28T14:22:10.000000"
+  },
+  {
+    id: "d4e5f6a7-8b9c-0d1e-2f3a-4b5c6d7e8f9a",
+    name: "Inglés Inicial",
+    code: "ING-001",
+    academicArea: "ingles",
+    description: "Vocabulario básico, gramática simple y conversación introductoria.",
+    educationLevel: "primaria",
+    gradeLevel: 2,
+    hoursPerWeek: 3,
+    isActive: true,
+    createdAt: "2026-06-10T11:45:00.000000",
+    updatedAt: "2026-06-10T11:45:00.000000"
+  },
+  {
+    id: "e5f6a7b8-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+    name: "Historia del Perú y del Mundo",
+    code: "CCSS-001",
+    academicArea: "ciencias_sociales",
+    description: "Estudio de las principales culturas y eventos históricos nacionales y globales.",
+    educationLevel: "secundaria",
+    gradeLevel: 5,
+    hoursPerWeek: 4,
+    isActive: true,
+    createdAt: "2026-06-12T15:30:00.000000",
+    updatedAt: "2026-06-12T15:30:00.000000"
+  },
+  {
+    id: "f6a7b8c9-0d1e-2f3a-4b5c-6d7e8f9a0b1c",
+    name: "Psicología y Ciudadanía",
+    code: "DPCC-001",
+    academicArea: "desarrollo_personal",
+    description: "Construcción de la identidad personal y comprensión de la convivencia democrática.",
+    educationLevel: "secundaria",
+    gradeLevel: 4,
+    hoursPerWeek: 3,
+    isActive: true,
+    createdAt: "2026-06-18T13:00:00.000000",
+    updatedAt: "2026-06-18T13:00:00.000000"
+  },
+  {
+    id: "a7b8c9d0-1e2f-3a4b-5c6d-7e8f9a0b1c2d",
+    name: "Dibujo y Pintura",
+    code: "ART-001",
+    academicArea: "arte_cultura",
+    description: "Taller práctico de técnicas artísticas básicas.",
+    educationLevel: "primaria",
+    gradeLevel: 6,
+    hoursPerWeek: 2,
+    isActive: false,
+    createdAt: "2026-06-22T09:45:00.000000",
+    updatedAt: "2026-06-22T09:45:00.000000"
+  }
+];
+
+export const academicAreas = [
+  { value: "matematica", label: "Matemática" },
+  { value: "comunicacion", label: "Comunicación" },
+  { value: "ciencia_tecnologia", label: "Ciencia y Tecnología" },
+  { value: "ciencias_sociales", label: "Ciencias Sociales" },
+  { value: "desarrollo_personal", label: "Desarrollo Personal" },
+  { value: "ingles", label: "Inglés" },
+  { value: "educacion_fisica", label: "Educación Física" },
+  { value: "arte_cultura", label: "Arte y Cultura" },
+  { value: "educacion_religiosa", label: "Educación Religiosa" }
+];
