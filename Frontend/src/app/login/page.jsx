@@ -4,37 +4,73 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
+import { apiFetch, cookies } from '@/config/api';
 
-// Simulated credentials without hyphens
+// Cuentas de prueba reales generadas por el DataSeeder del Backend (con contraseña Colegio2024)
 const mockCredentials = {
-  student: { code: 'ALU10024', pass: 'estudiante123' },
-  teacher: { code: 'DOC20415', pass: 'docente123' },
-  admin: { code: 'DIR00001', pass: 'director123' },
+  student: { code: 'AL20260001', pass: 'Colegio2024' },
+  teacher: { code: 'DC20260001', pass: 'Colegio2024' },
+  parent: { code: 'PA20260001', pass: 'Colegio2024' },
+  admin: { code: 'DI20260001', pass: 'Colegio2024' }, // Director
+  secretary: { code: 'SE20260001', pass: 'Colegio2024' }
 };
 
 export default function LoginPage() {
   const router = useRouter();
-  const [role, setRole] = useState('student'); // 'student', 'teacher', 'admin'
+  const [role, setRole] = useState('student'); // 'student', 'teacher', 'parent', 'admin', 'secretary'
   const [username, setUsername] = useState(mockCredentials.student.code);
   const [password, setPassword] = useState(mockCredentials.student.pass);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Auto-fill values when role tab changes
   const handleRoleChange = (newRole) => {
     setRole(newRole);
     setUsername(mockCredentials[newRole].code);
     setPassword(mockCredentials[newRole].pass);
+    setErrorMsg('');
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Simulating authentication logic and redirecting
-    setTimeout(() => {
+    setErrorMsg('');
+
+    try {
+      // Petición real al API Gateway /auth-service
+      const data = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          codigoUsuario: username,
+          password: password
+        })
+      });
+
+      // Guardar el token en la cookie
+      cookies.set('token', data.token);
+      
+      // Guardar la bandera de cambio de contraseña obligatoria para la Demo
+      localStorage.setItem('debeActualizarPassword', data.debeActualizarPassword.toString());
+
+      // Redirigir dinámicamente al portal correspondiente según el rol real
+      const redirectMap = {
+        'ALUMNO': '/portal/student',
+        'DOCENTE': '/portal/teacher',
+        'PADRE': '/portal/parent',
+        'DIRECTOR': '/portal/admin',
+        'SECRETARIA': '/portal/secretary',
+        'ADMIN_TIA': '/portal/admin'
+      };
+
+      const targetPath = redirectMap[data.rol] || '/portal/student';
+      router.push(targetPath);
+
+    } catch (err) {
+      setErrorMsg(err.message || 'Credenciales inválidas o servidor no disponible');
+    } finally {
       setLoading(false);
-      router.push(`/portal/${role}`);
-    }, 1200);
+    }
   };
 
   return (
@@ -65,23 +101,23 @@ export default function LoginPage() {
             <h1 className="text-3xl font-semibold text-[#031553] tracking-tight">Institución El Sauce Azul</h1>
           </div>
 
-          {/* Modern Role Selector Tabs */}
-          <div className="grid grid-cols-3 gap-1 bg-[#f1f3f5] p-1 rounded-xl border border-gray-100">
+          {/* Modern Role Selector Tabs (5 Columns) */}
+          <div className="grid grid-cols-5 gap-1 bg-[#f1f3f5] p-1 rounded-xl border border-gray-100">
             <button
               type="button"
               onClick={() => handleRoleChange('student')}
-              className={`py-2 px-3 text-xs font-medium rounded-lg transition-all duration-200 flex items-center justify-center cursor-pointer ${
+              className={`py-2 px-1 text-[10px] font-medium rounded-lg transition-all duration-200 flex items-center justify-center cursor-pointer ${
                 role === 'student'
                   ? 'bg-white text-[#031553] shadow-sm font-semibold'
                   : 'text-gray-500 hover:text-[#031553]'
               }`}
             >
-              Estudiante
+              Alumno
             </button>
             <button
               type="button"
               onClick={() => handleRoleChange('teacher')}
-              className={`py-2 px-3 text-xs font-medium rounded-lg transition-all duration-200 flex items-center justify-center cursor-pointer ${
+              className={`py-2 px-1 text-[10px] font-medium rounded-lg transition-all duration-200 flex items-center justify-center cursor-pointer ${
                 role === 'teacher'
                   ? 'bg-white text-[#031553] shadow-sm font-semibold'
                   : 'text-gray-500 hover:text-[#031553]'
@@ -91,8 +127,19 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
+              onClick={() => handleRoleChange('parent')}
+              className={`py-2 px-1 text-[10px] font-medium rounded-lg transition-all duration-200 flex items-center justify-center cursor-pointer ${
+                role === 'parent'
+                  ? 'bg-white text-[#031553] shadow-sm font-semibold'
+                  : 'text-gray-500 hover:text-[#031553]'
+              }`}
+            >
+              Padre
+            </button>
+            <button
+              type="button"
               onClick={() => handleRoleChange('admin')}
-              className={`py-2 px-3 text-xs font-medium rounded-lg transition-all duration-200 flex items-center justify-center cursor-pointer ${
+              className={`py-2 px-1 text-[10px] font-medium rounded-lg transition-all duration-200 flex items-center justify-center cursor-pointer ${
                 role === 'admin'
                   ? 'bg-white text-[#031553] shadow-sm font-semibold'
                   : 'text-gray-500 hover:text-[#031553]'
@@ -100,7 +147,25 @@ export default function LoginPage() {
             >
               Director
             </button>
+            <button
+              type="button"
+              onClick={() => handleRoleChange('secretary')}
+              className={`py-2 px-1 text-[10px] font-medium rounded-lg transition-all duration-200 flex items-center justify-center cursor-pointer ${
+                role === 'secretary'
+                  ? 'bg-white text-[#031553] shadow-sm font-semibold'
+                  : 'text-gray-500 hover:text-[#031553]'
+              }`}
+            >
+              Secretaría
+            </button>
           </div>
+
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="bg-red-50 text-red-600 text-xs py-2 px-3 rounded-lg border border-red-100 font-medium">
+              {errorMsg}
+            </div>
+          )}
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-6">

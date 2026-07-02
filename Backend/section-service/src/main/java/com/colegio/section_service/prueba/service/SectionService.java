@@ -21,7 +21,7 @@ public class SectionService {
     }
 
     // Obtener sección por ID
-    public Section getSectionById(UUID id) {
+    public Section getSectionById(Long id) {
         return sectionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Sección no encontrada con ID: " + id));
     }
@@ -32,29 +32,27 @@ public class SectionService {
             throw new IllegalArgumentException("Secundaria solo tiene hasta 5 grados.");
         }
 
-        sectionRepository.findByAcademicYearAndEducationLevelAndGradeLevelAndSectionName(
-                section.getAcademicYear(),
+        sectionRepository.findByEducationLevelAndGradeLevelAndSectionName(
                 section.getEducationLevel(),
                 section.getGradeLevel(),
                 section.getSectionName()
         ).ifPresent(s -> {
             throw new IllegalArgumentException("Ya existe la sección " +
                     section.getGradeLevel() + "° " + section.getEducationLevel() +
-                    " \"" + section.getSectionName() + "\" para el año " + section.getAcademicYear());
+                    " \"" + section.getSectionName() + "\"");
         });
 
         return sectionRepository.save(section);
     }
 
     // Actualizar sección existente
-    public Section updateSection(UUID id, Section sectionDetails) {
+    public Section updateSection(Long id, Section sectionDetails) {
         Section existingSection = getSectionById(id);
 
         if ("secundaria".equalsIgnoreCase(sectionDetails.getEducationLevel()) && sectionDetails.getGradeLevel() > 5) {
             throw new IllegalArgumentException("Secundaria solo tiene hasta 5 grados.");
         }
 
-        existingSection.setAcademicYear(sectionDetails.getAcademicYear());
         existingSection.setEducationLevel(sectionDetails.getEducationLevel());
         existingSection.setGradeLevel(sectionDetails.getGradeLevel());
         existingSection.setSectionName(sectionDetails.getSectionName());
@@ -65,39 +63,13 @@ public class SectionService {
     }
 
     // Eliminar sección
-    public void deleteSection(UUID id) {
+    public void deleteSection(Long id) {
         Section section = getSectionById(id);
         sectionRepository.delete(section);
     }
 
-    // Obtener secciones por año académico
-    public List<Section> getSectionsByYear(Integer academicYear) {
-        return sectionRepository.findByAcademicYear(academicYear);
-    }
     // Obtener secciones activas
     public List<Section> getActiveSections() {
         return sectionRepository.findByIsActiveTrue();
-    }
-
-    //Clonar secciones de años anteriores
-    public List<Section> cloneSectionsFromYear(Integer fromYear, Integer toYear) {
-        List<Section> previousSections = sectionRepository.findByAcademicYear(fromYear);
-
-        if (previousSections.isEmpty()) {
-            throw new EntityNotFoundException("No se encontraron secciones para el año " + fromYear);
-        }
-
-        return previousSections.stream()
-                .map(prev -> {
-                    Section newSection = new Section();
-                    newSection.setAcademicYear(toYear);
-                    newSection.setEducationLevel(prev.getEducationLevel());
-                    newSection.setGradeLevel(prev.getGradeLevel());
-                    newSection.setSectionName(prev.getSectionName());
-                    newSection.setMaxStudents(prev.getMaxStudents());
-                    newSection.setIsActive(true);
-                    return sectionRepository.save(newSection);
-                })
-                .toList();
     }
 }

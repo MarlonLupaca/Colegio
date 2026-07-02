@@ -13,13 +13,8 @@ import java.util.UUID;
 public class Section {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-
-    @Column(name = "academic_year", nullable = false)
-    @NotNull(message = "El año académico es obligatorio")
-    @Min(2000) @Max(2100)
-    private Integer academicYear;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "education_level", nullable = false, length = 20)
     @NotBlank(message = "El nivel educativo es obligatorio")

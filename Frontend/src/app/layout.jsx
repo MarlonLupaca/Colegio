@@ -1,5 +1,7 @@
 import { Roboto } from 'next/font/google';
 import './globals.css';
+import { ToastProvider } from '@/context/ToastContext';
+import { ConfirmationProvider } from '@/context/ConfirmationContext';
 
 const roboto = Roboto({
   weight: ['300', '400', '500', '700'],
@@ -15,7 +17,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${roboto.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-sidebar-bg">{children}</body>
+      <body className="min-h-full flex flex-col bg-sidebar-bg">
+        <ToastProvider>
+          <ConfirmationProvider>
+            {children}
+          </ConfirmationProvider>
+        </ToastProvider>
+      </body>
     </html>
   );
 }

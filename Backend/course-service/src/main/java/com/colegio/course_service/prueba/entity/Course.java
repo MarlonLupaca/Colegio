@@ -19,7 +19,6 @@ public class Course {
     private UUID id;
 
     @Column(unique = true, nullable = false, length = 20)
-    @NotBlank(message = "El código es obligatorio")
     private String code;
 
     @Column(nullable = false, length = 100)

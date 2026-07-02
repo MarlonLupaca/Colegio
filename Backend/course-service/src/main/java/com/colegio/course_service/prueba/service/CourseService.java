@@ -22,6 +22,28 @@ public class CourseService {
         if ("secundaria".equalsIgnoreCase(course.getEducationLevel()) && course.getGradeLevel() > 5) {
             throw new IllegalArgumentException("En el Perú, el nivel secundaria solo tiene hasta 5 grados.");
         }
+
+        // Generación automática del código si no se especifica o está vacío
+        if (course.getCode() == null || course.getCode().trim().isEmpty()) {
+            String prefix = "CUR-";
+            var ultimoCursoOpt = courseRepository.findFirstByCodeStartingWithOrderByCodeDesc(prefix);
+            int nextNumber = 1;
+            
+            if (ultimoCursoOpt.isPresent()) {
+                String ultimoCodigo = ultimoCursoOpt.get().getCode();
+                try {
+                    String numeroStr = ultimoCodigo.substring(prefix.length());
+                    nextNumber = Integer.parseInt(numeroStr) + 1;
+                } catch (Exception e) {
+                    // Fallback en caso de formato no numérico
+                    nextNumber = (int) (courseRepository.count() + 1);
+                }
+            }
+            
+            String nuevoCodigo = String.format("%s%04d", prefix, nextNumber);
+            course.setCode(nuevoCodigo);
+        }
+
         return courseRepository.save(course);
     }
 
