@@ -12,7 +12,7 @@ const GRADE_OPTIONS = {
     { value: '5', label: '5° grado' },
     { value: '6', label: '6° grado (Primaria)' },
   ],
-  primaria: [
+  PRIMARIA: [
     { value: '1', label: '1° de Primaria' },
     { value: '2', label: '2° de Primaria' },
     { value: '3', label: '3° de Primaria' },
@@ -20,7 +20,7 @@ const GRADE_OPTIONS = {
     { value: '5', label: '5° de Primaria' },
     { value: '6', label: '6° de Primaria' },
   ],
-  secundaria: [
+  SECUNDARIA: [
     { value: '1', label: '1° de Secundaria' },
     { value: '2', label: '2° de Secundaria' },
     { value: '3', label: '3° de Secundaria' },
@@ -41,7 +41,7 @@ export default function CourseFilters({
   const handleLevelChange = (e) => {
     const val = e.target.value;
     setLevelFilter(val);
-    if (val === 'secundaria' && gradeFilter !== 'todos' && parseInt(gradeFilter) > 5) {
+    if (val === 'SECUNDARIA' && gradeFilter !== 'todos' && parseInt(gradeFilter) > 5) {
       setGradeFilter('todos');
     }
   };
@@ -95,8 +95,8 @@ export default function CourseFilters({
           <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Nivel Educativo</label>
           <select value={levelFilter} onChange={handleLevelChange} className={selectClass}>
             <option value="todos">Todos los Niveles</option>
-            <option value="primaria">Primaria</option>
-            <option value="secundaria">Secundaria</option>
+            <option value="PRIMARIA">Primaria</option>
+            <option value="SECUNDARIA">Secundaria</option>
           </select>
         </div>
 

@@ -27,21 +27,37 @@ export default function SectionCoursesTab({ section }) {
     if (!section?.id) return;
     setLoading(true);
     try {
-      // 1. Obtener clases vinculadas a la sección
-      const classes = await apiFetch(`/api/v1/assigned-classes/section/${section.id}`).catch(() => []);
+      // 1. Obtener todas las clases vinculadas
+      const allCls = await apiFetch('/api/v1/assigned-classes').catch(() => []);
       
-      // 2. Obtener lista de cursos completa
+      // 2. Filtrar por la sección actual (comparando IDs de UUIDs)
+      const sectionClasses = allCls.filter(
+        cls => cls.annualSections?.id === section.id
+      );
+
+      // 3. Obtener lista de cursos completa
       const courses = await apiFetch('/api/v1/courses').catch(() => []);
 
-      // 3. Cruzar datos
-      const mapped = classes.map(cls => {
+      // 4. Obtener lista de docentes completa para resolver nombres
+      const teachers = await apiFetch('/api/user/usuarios/rol/DOCENTE').catch(() => []);
+
+      // 5. Cruzar datos
+      const mapped = sectionClasses.map(cls => {
         const courseInfo = courses.find(c => c.id === cls.courseId);
+        const teacherInfo = teachers.find(
+          t => String(t.id) === String(cls.teacherId) || String(t.codigoUsuario) === String(cls.teacherId)
+        );
+
         return {
           id: cls.id,
           courseId: cls.courseId,
           name: courseInfo ? courseInfo.name : 'Curso Académico',
           code: courseInfo ? courseInfo.code : 'CUR-XXXX',
-          teacher: cls.teacherId ? `Profesor ID: ${cls.teacherId}` : 'Sin docente asignado'
+          teacher: teacherInfo
+            ? `${teacherInfo.nombres} ${teacherInfo.apellidos}`
+            : cls.teacherId
+              ? `Profesor ID: ${cls.teacherId}`
+              : 'Sin docente asignado'
         };
       });
 
@@ -121,6 +137,8 @@ export default function SectionCoursesTab({ section }) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         sectionId={section.id}
+        educationLevel={section.level}
+        gradeLevel={section.grade}
         onSuccess={fetchAssignedClasses}
       />
 
