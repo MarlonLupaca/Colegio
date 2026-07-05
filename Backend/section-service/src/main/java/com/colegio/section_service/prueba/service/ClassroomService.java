@@ -60,8 +60,7 @@ public class ClassroomService {
 
     public void deleteClassroom(UUID id) {
         Classroom classroom = getClassroomById(id);
-        classroom.setStatus(ClassroomStatus.INACTIVO);
-        classroomRepository.save(classroom);
+        classroomRepository.delete(classroom);
     }
 
 

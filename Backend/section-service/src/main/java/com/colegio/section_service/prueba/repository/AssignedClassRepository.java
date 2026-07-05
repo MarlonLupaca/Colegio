@@ -8,12 +8,13 @@ import java.util.UUID;
 
 public interface AssignedClassRepository extends JpaRepository<AssignedClass, UUID> {
 
-    List<AssignedClass> findByAnnualSectionId(Long annualSectionId);
 
-    List<AssignedClass> findByCourseId(Long courseId);
+    List<AssignedClass> findByAnnualSectionsId(UUID annualSectionId);
+
+    List<AssignedClass> findByCourseId(UUID courseId);
 
     List<AssignedClass> findByTeacherId(Long teacherId);
 
-    boolean existsByAnnualSectionIdAndCourseId(Long annualSectionId, Long courseId);
+    boolean existsByAnnualSectionsIdAndCourseId(UUID annualSectionId, UUID courseId);
 
 }

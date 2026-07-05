@@ -32,12 +32,12 @@ public class AssignedClassController {
     }
 
     @GetMapping("/section/{annualSectionId}")
-    public List<AssignedClass> getByAnnualSection(@PathVariable Long annualSectionId) {
+    public List<AssignedClass> getByAnnualSection(@PathVariable UUID annualSectionId) {
         return assignedClassService.getByAnnualSection(annualSectionId);
     }
 
     @GetMapping("/course/{courseId}")
-    public List<AssignedClass> getByCourse(@PathVariable Long courseId) {
+    public List<AssignedClass> getByCourse(@PathVariable UUID courseId) {
         return assignedClassService.getByCourse(courseId);
     }
 
