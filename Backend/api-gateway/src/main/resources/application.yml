@@ -70,6 +70,11 @@ spring:
           uri: lb://SCHEDULE-SERVICE
           predicates:
             - Path=/api/v1/class-schedules/**
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notification/**
+
 # Configuración de Cliente Eureka
 eureka:
   client:
