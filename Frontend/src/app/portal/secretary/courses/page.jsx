@@ -11,6 +11,7 @@ import CourseFilters from './components/CourseFilters';
 import CourseTable from './components/CourseTable';
 import CourseMobileList from './components/CourseMobileList';
 import CourseModal from './components/CourseModal';
+import CourseTeacherAssignModal from './components/CourseTeacherAssignModal';
 import { academicAreas } from './data';
 
 export default function AdminCoursesPage() {
@@ -18,13 +19,16 @@ export default function AdminCoursesPage() {
   const { showToast } = useToast();
   const { askConfirmation } = useConfirmation();
 
-  // ── Data & Loading States
+  // Data & Loading States
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Modal para visualización de detalles
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewCourse, setViewCourse] = useState(null);
+
+  // Modal para asignación de docente
+  const [assignTeacherCourse, setAssignTeacherCourse] = useState(null);
 
   // Cargar cursos reales del backend
   const fetchCourses = async () => {
@@ -180,6 +184,40 @@ export default function AdminCoursesPage() {
     }
   };
 
+  // Cargar asignaciones para la ficha detallada
+  const [detailedAssignments, setDetailedAssignments] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [allSections, setAllSections] = useState([]);
+
+  useEffect(() => {
+    if (isViewOpen && viewCourse) {
+      // 1. Cargar datos locales
+      const localDataStr = localStorage.getItem('local_assigned_classes');
+      const localClasses = localDataStr ? JSON.parse(localDataStr) : [];
+      const matches = localClasses.filter(c => c.courseId === viewCourse.id);
+
+      // 2. Cargar usuarios y secciones para nombres
+      Promise.all([
+        apiFetch('/api/user/usuarios').catch(() => []),
+        apiFetch('/api/v1/sections').catch(() => [])
+      ]).then(([users, sectionsData]) => {
+        setAllUsers(users);
+        setAllSections(sectionsData);
+
+        const mapped = matches.map(m => {
+          const uInfo = users.find(u => u.id === m.teacherId);
+          const sInfo = sectionsData.find(s => s.id === m.sectionId);
+          return {
+            id: m.id,
+            sectionLabel: sInfo ? `${sInfo.gradeLevel}° "${sInfo.sectionName.toUpperCase()}"` : `Sección ID: ${m.sectionId}`,
+            teacherName: uInfo ? `${uInfo.nombres} ${uInfo.apellidos}` : `Profesor ID: ${m.teacherId}`
+          };
+        });
+        setDetailedAssignments(mapped);
+      });
+    }
+  }, [isViewOpen, viewCourse]);
+
   const handleOpenView = (course) => {
     setViewCourse(course);
     setIsViewOpen(true);
@@ -228,7 +266,7 @@ export default function AdminCoursesPage() {
       />
 
       {/* Course list */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden text-left">
         {filteredCourses.length > 0 ? (
           <>
             <CourseTable
@@ -237,6 +275,7 @@ export default function AdminCoursesPage() {
               onDelete={handleDelete}
               onToggleActive={handleToggleActive}
               onView={handleOpenView}
+              onAssignTeacher={setAssignTeacherCourse}
             />
             <CourseMobileList
               courses={filteredCourses}
@@ -272,10 +311,18 @@ export default function AdminCoursesPage() {
         courses={courses}
       />
 
+      {/* Teacher assignment modal */}
+      <CourseTeacherAssignModal
+        isOpen={assignTeacherCourse !== null}
+        onClose={() => setAssignTeacherCourse(null)}
+        course={assignTeacherCourse}
+        onSuccess={fetchCourses}
+      />
+
       {/* Modal: Ver Ficha Detallada del Curso */}
       {isViewOpen && viewCourse && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in text-left">
             {/* Header */}
             <div className="bg-[#031553] text-white p-6 relative">
               <button
@@ -346,6 +393,27 @@ export default function AdminCoursesPage() {
                 </div>
               </div>
 
+              {/* Docentes y Salones Asignados */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5 border-b pb-1.5 border-gray-100">
+                  Aulas y Docentes Responsables (Local)
+                </h4>
+                {detailedAssignments.length > 0 ? (
+                  <div className="space-y-2 max-h-[120px] overflow-y-auto pr-1">
+                    {detailedAssignments.map(da => (
+                      <div key={da.id} className="flex justify-between items-center bg-indigo-50/20 border border-indigo-100/50 p-2.5 rounded-xl">
+                        <span className="font-bold text-[#031553]">{da.sectionLabel}</span>
+                        <span className="text-gray-500 font-semibold">{da.teacherName}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 italic bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    Este curso no ha sido asignado a ningún salón de clase actualmente.
+                  </p>
+                )}
+              </div>
+
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5 border-b pb-1.5 border-gray-100">
                   Descripción y Temario
@@ -360,7 +428,6 @@ export default function AdminCoursesPage() {
             <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
               <button
                 onClick={() => {
-                  setSelectedCourse(viewCourse);
                   setFormModal({ isOpen: true, type: 'edit', course: viewCourse });
                   setIsViewOpen(false);
                 }}

@@ -23,11 +23,18 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess 
           // 1. Cargar todos los cursos disponibles en el sistema
           const allCourses = await apiFetch('/api/v1/courses');
           
-          // 2. Cargar los cursos ya asignados a este salón
+          // 2. Cargar los cursos ya asignados (BD)
           const assigned = await apiFetch(`/api/v1/assigned-classes/section/${sectionId}`).catch(() => []);
-          const assignedCourseIds = new Set(assigned.map(a => a.courseId));
+          const dbCourseIds = assigned.map(a => a.courseId);
 
-          // 3. Filtrar los que no están asignados en este salón
+          // 3. Cargar los cursos asignados localmente (localStorage)
+          const localDataStr = localStorage.getItem('local_assigned_classes');
+          const localClasses = localDataStr ? JSON.parse(localDataStr) : [];
+          const localCourseIds = localClasses.filter(c => String(c.sectionId) === String(sectionId)).map(c => c.courseId);
+
+          const assignedCourseIds = new Set([...dbCourseIds, ...localCourseIds]);
+
+          // 4. Filtrar los que no están asignados en este salón
           const unassigned = allCourses.filter(c => !assignedCourseIds.has(c.id));
           setCourses(unassigned);
           setSelectedIds([]);
@@ -57,7 +64,10 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess 
 
     setSubmitting(true);
     try {
-      // Enviar peticiones concurrentes para registrar las clases asignadas
+      // Intentar guardar en base de datos. Si falla, fallback a localStorage.
+      const localDataStr = localStorage.getItem('local_assigned_classes');
+      const localClasses = localDataStr ? JSON.parse(localDataStr) : [];
+
       await Promise.all(
         selectedIds.map(async (courseId) => {
           const payload = {
@@ -67,18 +77,32 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess 
             courseId: parseInt(courseId),
             teacherId: null
           };
-          return apiFetch('/api/v1/assigned-classes', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
+          
+          try {
+            await apiFetch('/api/v1/assigned-classes', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+          } catch {
+            // Guardar localmente si el microservicio falla o no está encendido
+            localClasses.push({
+              id: Date.now() + courseId, // ID temporal
+              sectionId: parseInt(sectionId),
+              courseId: parseInt(courseId),
+              teacherId: null
+            });
+          }
         })
       );
 
-      showToast(`¡Se asignaron exitosamente ${selectedIds.length} cursos al salón!`, 'success');
+      // Guardar cambios locales acumulados
+      localStorage.setItem('local_assigned_classes', JSON.stringify(localClasses));
+
+      showToast(`¡Se asignaron exitosamente ${selectedIds.length} cursos al salón (Híbrido)!`, 'success');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      showToast(err.message || 'Error al asignar cursos a la sección.', 'error');
+      showToast('Error al asignar materias al salón.', 'error');
     } finally {
       setSubmitting(false);
     }

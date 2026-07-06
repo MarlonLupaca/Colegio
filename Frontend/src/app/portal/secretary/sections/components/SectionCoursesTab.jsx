@@ -6,12 +6,14 @@ import {
   Trash2, 
   User, 
   BookOpen,
-  Search
+  Search,
+  UserPlus
 } from 'lucide-react';
 import { apiFetch } from '@/config/api';
 import { useToast } from '@/context/ToastContext';
 import { useConfirmation } from '@/context/ConfirmationContext';
 import AddCoursesModal from './AddCoursesModal';
+import AssignTeacherModal from './AssignTeacherModal';
 
 export default function SectionCoursesTab({ section }) {
   const { showToast } = useToast();
@@ -20,6 +22,10 @@ export default function SectionCoursesTab({ section }) {
   const [assignedClasses, setAssignedClasses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Estado para el modal de asignación de docente
+  const [selectedClassForTeacher, setSelectedClassForTeacher] = useState(null);
+  
   const [searchTerm, setSearchTerm] = useState('');
 
   // Cargar cursos asignados a esta sección
@@ -27,21 +33,45 @@ export default function SectionCoursesTab({ section }) {
     if (!section?.id) return;
     setLoading(true);
     try {
-      // 1. Obtener clases vinculadas a la sección
-      const classes = await apiFetch(`/api/v1/assigned-classes/section/${section.id}`).catch(() => []);
+      // 1. Obtener clases vinculadas en la base de datos
+      const dbClasses = await apiFetch(`/api/v1/assigned-classes/section/${section.id}`).catch(() => []);
       
-      // 2. Obtener lista de cursos completa
+      // 2. Obtener clases vinculadas localmente en localStorage
+      const localDataStr = localStorage.getItem('local_assigned_classes');
+      const localClasses = localDataStr ? JSON.parse(localDataStr) : [];
+      const sectionLocalClasses = localClasses.filter(c => c.sectionId === section.id);
+
+      // Combinar base de datos con localStorage
+      const allClasses = [...dbClasses, ...sectionLocalClasses.map(lc => ({
+        id: lc.id,
+        courseId: lc.courseId,
+        teacherId: lc.teacherId,
+        isLocal: true
+      }))];
+
+      // 3. Obtener lista de cursos completa
       const courses = await apiFetch('/api/v1/courses').catch(() => []);
 
-      // 3. Cruzar datos
-      const mapped = classes.map(cls => {
+      // 4. Obtener lista de usuarios para cruzar nombres de docentes
+      const users = await apiFetch('/api/user/usuarios').catch(() => []);
+
+      // 5. Cruzar datos
+      const mapped = allClasses.map(cls => {
         const courseInfo = courses.find(c => c.id === cls.courseId);
+        
+        let teacherLabel = 'Sin docente asignado';
+        if (cls.teacherId) {
+          const teacherInfo = users.find(u => u.id === cls.teacherId);
+          teacherLabel = teacherInfo ? `${teacherInfo.nombres} ${teacherInfo.apellidos}` : `Profesor ID: ${cls.teacherId}`;
+        }
+
         return {
           id: cls.id,
           courseId: cls.courseId,
           name: courseInfo ? courseInfo.name : 'Curso Académico',
           code: courseInfo ? courseInfo.code : 'CUR-XXXX',
-          teacher: cls.teacherId ? `Profesor ID: ${cls.teacherId}` : 'Sin docente asignado'
+          teacher: teacherLabel,
+          isLocal: cls.isLocal || false
         };
       });
 
@@ -68,9 +98,20 @@ export default function SectionCoursesTab({ section }) {
     if (!isConfirmed) return;
 
     try {
-      await apiFetch(`/api/v1/assigned-classes/${assignedClass.id}`, {
-        method: 'DELETE'
-      });
+      if (assignedClass.isLocal) {
+        // Eliminar del localStorage
+        const localDataStr = localStorage.getItem('local_assigned_classes');
+        if (localDataStr) {
+          const localClasses = JSON.parse(localDataStr);
+          const updated = localClasses.filter(c => c.id !== assignedClass.id);
+          localStorage.setItem('local_assigned_classes', JSON.stringify(updated));
+        }
+      } else {
+        // Eliminar del backend
+        await apiFetch(`/api/v1/assigned-classes/${assignedClass.id}`, {
+          method: 'DELETE'
+        });
+      }
       showToast('Asignatura retirada correctamente.', 'success');
       fetchAssignedClasses();
     } catch (err) {
@@ -96,7 +137,7 @@ export default function SectionCoursesTab({ section }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-xs text-[#031553] text-left">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-gray-100">
         <div>
@@ -121,6 +162,14 @@ export default function SectionCoursesTab({ section }) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         sectionId={section.id}
+        onSuccess={fetchAssignedClasses}
+      />
+
+      <AssignTeacherModal
+        isOpen={selectedClassForTeacher !== null}
+        onClose={() => setSelectedClassForTeacher(null)}
+        assignedClassId={selectedClassForTeacher?.id}
+        courseName={selectedClassForTeacher?.name}
         onSuccess={fetchAssignedClasses}
       />
 
@@ -171,17 +220,26 @@ export default function SectionCoursesTab({ section }) {
                     <td className="py-3 px-4 text-secondary font-semibold">
                       <div className="flex items-center gap-2">
                         <User className="w-3.5 h-3.5 text-primary/40" />
-                        {item.teacher}
+                        <span>{item.teacher}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteCourse(item)}
-                        className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all cursor-pointer"
-                        title="Retirar curso"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setSelectedClassForTeacher(item)}
+                          className="p-1.5 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg transition-all cursor-pointer"
+                          title="Asignar/Cambiar docente"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCourse(item)}
+                          className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all cursor-pointer"
+                          title="Retirar curso"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
