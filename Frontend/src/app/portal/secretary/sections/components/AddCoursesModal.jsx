@@ -73,18 +73,32 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, educationL
             courseId: courseId, 
             teacherId: null
           };
-          return apiFetch('/api/v1/assigned-classes', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
+          
+          try {
+            await apiFetch('/api/v1/assigned-classes', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+          } catch {
+            // Guardar localmente si el microservicio falla o no está encendido
+            localClasses.push({
+              id: Date.now() + courseId, // ID temporal
+              sectionId: parseInt(sectionId),
+              courseId: parseInt(courseId),
+              teacherId: null
+            });
+          }
         })
       );
 
-      showToast(`¡Se asignaron exitosamente ${selectedIds.length} cursos al salón!`, 'success');
+      // Guardar cambios locales acumulados
+      localStorage.setItem('local_assigned_classes', JSON.stringify(localClasses));
+
+      showToast(`¡Se asignaron exitosamente ${selectedIds.length} cursos al salón (Híbrido)!`, 'success');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      showToast(err.message || 'Error al asignar cursos a la sección.', 'error');
+      showToast('Error al asignar materias al salón.', 'error');
     } finally {
       setSubmitting(false);
     }

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Edit2, Trash2, Eye } from 'lucide-react';
+import { apiFetch } from '@/config/api';
 import { academicAreas } from '../data';
 
 const getAreaLabel = (areaValue) => {
@@ -25,7 +26,33 @@ function ActiveSwitch({ isActive, onToggle, title }) {
   );
 }
 
-export default function CourseTable({ courses, onEdit, onDelete, onToggleActive, onView }) {
+export default function CourseTable({ courses, onEdit, onDelete, onToggleActive, onView, onAssignTeacher }) {
+  // Cargar relaciones locales de profesores
+  const [localAssignments, setLocalAssignments] = React.useState([]);
+  const [allUsers, setAllUsers] = React.useState([]);
+
+  React.useEffect(() => {
+    const dataStr = localStorage.getItem('local_assigned_classes');
+    if (dataStr) {
+      setLocalAssignments(JSON.parse(dataStr));
+    }
+    // Cargar nombres de usuarios
+    apiFetch('/api/user/usuarios')
+      .then(data => setAllUsers(data || []))
+      .catch(() => {});
+  }, [courses]);
+
+  // Helper para resolver el nombre del profesor del curso
+  const getTeacherForCourse = (courseId) => {
+    // Buscar en local assignments
+    const match = localAssignments.find(la => la.courseId === courseId);
+    if (match) {
+      const user = allUsers.find(u => u.id === match.teacherId);
+      return user ? `${user.nombres} ${user.apellidos}` : `Profesor ID: ${match.teacherId}`;
+    }
+    return 'Sin docente asignado';
+  };
+
   return (
     <div className="hidden md:block overflow-x-auto">
       <table className="w-full text-left border-collapse">
@@ -35,6 +62,7 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
             <th className="py-3.5 px-4">Nombre del Curso</th>
             <th className="py-3.5 px-4">Área Académica</th>
             <th className="py-3.5 px-4">Nivel / Grado</th>
+            <th className="py-3.5 px-4">Docente</th>
             <th className="py-3.5 px-4 text-center">Horas Sem.</th>
             <th className="py-3.5 px-4 text-center">Estado</th>
             <th className="py-3.5 px-5 text-right">Acciones</th>
@@ -50,7 +78,7 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
                 </span>
               </td>
 
-              {/* Name + description (Clamp a 1 línea con puntos suspensivos) */}
+              {/* Name + description */}
               <td className="py-3 px-4 font-bold text-primary max-w-xs">
                 <p className="truncate" title={course.name}>{course.name}</p>
                 {course.description && (
@@ -79,6 +107,14 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
                 </div>
               </td>
 
+              {/* Teacher */}
+              <td className="py-3 px-4 text-secondary font-semibold">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                  <span>{getTeacherForCourse(course.id)}</span>
+                </div>
+              </td>
+
               {/* Hours */}
               <td className="py-3 px-4 text-center">
                 <span className="bg-primary/5 text-primary px-2.5 py-1 rounded-lg font-bold">
@@ -90,9 +126,9 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
               <td className="py-3 px-4 text-center">
                 <div className="flex justify-center">
                   <ActiveSwitch
-                    isActive={course.isActive}
-                    onToggle={() => onToggleActive(course)}
-                    title={course.isActive ? 'Desactivar curso' : 'Activar curso'}
+                     isActive={course.isActive}
+                     onToggle={() => onToggleActive(course)}
+                     title={course.isActive ? 'Desactivar curso' : 'Activar curso'}
                   />
                 </div>
               </td>
@@ -100,6 +136,15 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
               {/* Actions */}
               <td className="py-3 px-5 text-right">
                 <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => onAssignTeacher(course)}
+                    className="p-1.5 bg-indigo-50/40 hover:bg-[#031553] hover:text-white text-[#031553] rounded-lg transition-all cursor-pointer border border-[#031553]/5"
+                    title="Asignar Docente a Sección"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => onView(course)}
                     className="p-1.5 bg-indigo-50/40 hover:bg-[#031553] hover:text-white text-[#031553] rounded-lg transition-all cursor-pointer border border-[#031553]/5"
