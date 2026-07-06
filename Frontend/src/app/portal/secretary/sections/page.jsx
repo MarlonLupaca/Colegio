@@ -236,13 +236,6 @@ export default function SectionsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
         <div className="space-y-1.5 text-left">
-          <button
-            onClick={() => router.push('/portal/secretary')}
-            className="flex items-center gap-1.5 text-[10px] font-bold text-secondary hover:text-primary transition-colors cursor-pointer select-none"
-          >
-            <ArrowLeft className="w-3 h-3" />
-            <span>Volver a Inicio</span>
-          </button>
           <div className="flex items-center gap-2">
             <div className="p-2 bg-primary/5 rounded-xl text-primary">
               <FolderTree className="w-5 h-5" />

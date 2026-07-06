@@ -8,3 +8,5 @@ export const teacherMenuItems = [
   { id: 'grading', label: 'Calificaciones', icon: Award },
   { id: 'settings', label: 'Ajustes', icon: Settings }
 ];
+
+

@@ -32,21 +32,24 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
   const [allUsers, setAllUsers] = React.useState([]);
 
   React.useEffect(() => {
-    const dataStr = localStorage.getItem('local_assigned_classes');
-    if (dataStr) {
-      setLocalAssignments(JSON.parse(dataStr));
-    }
-    // Cargar nombres de usuarios
-    apiFetch('/api/user/usuarios')
-      .then(data => setAllUsers(data || []))
-      .catch(() => {});
+    // Cargar nombres de usuarios y asignaciones reales del backend
+    Promise.all([
+      apiFetch('/api/user/usuarios').catch(() => []),
+      apiFetch('/api/v1/assigned-classes').catch(() => [])
+    ]).then(([users, assignedData]) => {
+      setAllUsers(users || []);
+      setLocalAssignments(assignedData || []);
+    }).catch(() => {});
   }, [courses]);
 
   // Helper para resolver el nombre del profesor del curso
   const getTeacherForCourse = (courseId) => {
     // Buscar en local assignments
     const match = localAssignments.find(la => la.courseId === courseId);
-    if (match) {
+    if (match && match.teacherId !== null && match.teacherId !== undefined) {
+      if (match.teacherName && !match.teacherName.startsWith('Profesor ID:')) {
+        return match.teacherName;
+      }
       const user = allUsers.find(u => u.id === match.teacherId);
       return user ? `${user.nombres} ${user.apellidos}` : `Profesor ID: ${match.teacherId}`;
     }

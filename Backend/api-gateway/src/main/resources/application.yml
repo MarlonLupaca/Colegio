@@ -80,6 +80,16 @@ spring:
           predicates:
             - Path=/api/notification/**
 
+        - id: material-service
+          uri: lb://MATERIAL-SERVICE
+          predicates:
+            - Path=/api/v1/materials/**
+
+        - id: material-weeks-service
+          uri: lb://MATERIAL-SERVICE
+          predicates:
+            - Path=/api/v1/weeks/**
+
 # Configuración de Cliente Eureka
 eureka:
   client:

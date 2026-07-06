@@ -85,6 +85,12 @@ public class UsuarioService {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + codigoUsuario));
     }
 
+    public UsuarioResponseDTO buscarPorId(Long id) {
+        return usuarioRepository.findById(id)
+                .map(this::toDTO)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado por ID: " + id));
+    }
+
     @Transactional
     public UsuarioResponseDTO actualizarUsuario(String codigoUsuario, ActualizarUsuarioRequestDTO request) {
         Usuario usuario = usuarioRepository.findByCodigoUsuario(codigoUsuario)

@@ -6,27 +6,20 @@ import {
   Trash2, 
   User, 
   BookOpen,
-  Search,
-  UserPlus
+  Search
 } from 'lucide-react';
 import { apiFetch } from '@/config/api';
 import { useToast } from '@/context/ToastContext';
 import { useConfirmation } from '@/context/ConfirmationContext';
 import AddCoursesModal from './AddCoursesModal';
-import AssignTeacherModal from './AssignTeacherModal';
 
 export default function SectionCoursesTab({ section }) {
   const { showToast } = useToast();
   const { askConfirmation } = useConfirmation();
 
   const [assignedClasses, setAssignedClasses] = useState([]);
-  const [teachersList, setTeachersList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Estado para el modal de asignación de docente
-  const [selectedClassForTeacher, setSelectedClassForTeacher] = useState(null);
-  
   const [searchTerm, setSearchTerm] = useState('');
 
   // Cargar cursos asignados a esta sección
@@ -34,39 +27,18 @@ export default function SectionCoursesTab({ section }) {
     if (!section?.id) return;
     setLoading(true);
     try {
-      // 1. Obtener todas las clases vinculadas
-      const allCls = await apiFetch('/api/v1/assigned-classes').catch(() => []);
-      
-      // 2. Filtrar por la sección actual (comparando IDs de UUIDs)
-      const sectionClasses = allCls.filter(
-        cls => cls.annualSections?.id === section.id
-      );
+      // 1. Obtener las asignaciones estructuradas con cursos y docentes de esta sección
+      const sectionClasses = await apiFetch(`/api/v1/annual-sections/${section.id}/courses-with-teachers`).catch(() => []);
 
-      // 3. Obtener lista de cursos completa
-      const courses = await apiFetch('/api/v1/courses').catch(() => []);
-
-      // 4. Obtener lista de docentes completa para resolver nombres
-      const teachers = await apiFetch('/api/user/usuarios/rol/DOCENTE').catch(() => []);
-      setTeachersList(teachers || []);
-
-      // 5. Cruzar datos
+      // 3. Mapear datos utilizando las propiedades estructuradas enviadas por el backend
       const mapped = sectionClasses.map(cls => {
-        const courseInfo = courses.find(c => c.id === cls.courseId);
-        const teacherInfo = (teachers || []).find(
-          t => String(t.id) === String(cls.teacherId) || String(t.codigoUsuario) === String(cls.teacherId)
-        );
-
         return {
           id: cls.id,
           courseId: cls.courseId,
           teacherId: cls.teacherId,
-          name: courseInfo ? courseInfo.name : 'Curso Académico',
-          code: courseInfo ? courseInfo.code : 'CUR-XXXX',
-          teacher: teacherInfo
-            ? `${teacherInfo.nombres} ${teacherInfo.apellidos}`
-            : cls.teacherId
-              ? `Profesor ID: ${cls.teacherId}`
-              : 'Sin docente asignado'
+          name: cls.courseName || 'Curso Académico',
+          code: cls.courseCode || 'CUR-XXXX',
+          teacher: cls.teacherName || 'Sin docente asignado'
         };
       });
 
@@ -82,28 +54,6 @@ export default function SectionCoursesTab({ section }) {
     fetchAssignedClasses();
   }, [section]);
 
-  const handleAssignTeacher = async (item, teacherIdVal) => {
-    try {
-      const payload = {
-        annualSections: {
-          id: section.id
-        },
-        courseId: item.courseId,
-        teacherId: teacherIdVal ? parseInt(teacherIdVal) : null
-      };
-
-      await apiFetch(`/api/v1/assigned-classes/${item.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      showToast('Docente asignado correctamente.', 'success');
-      fetchAssignedClasses();
-    } catch (err) {
-      showToast(err.message || 'Error al asignar docente.', 'error');
-    }
-  };
-
   const handleDeleteCourse = async (assignedClass) => {
     const isConfirmed = await askConfirmation({
       title: 'Retirar Curso de la Sección',
@@ -115,20 +65,11 @@ export default function SectionCoursesTab({ section }) {
     if (!isConfirmed) return;
 
     try {
-      if (assignedClass.isLocal) {
-        // Eliminar del localStorage
-        const localDataStr = localStorage.getItem('local_assigned_classes');
-        if (localDataStr) {
-          const localClasses = JSON.parse(localDataStr);
-          const updated = localClasses.filter(c => c.id !== assignedClass.id);
-          localStorage.setItem('local_assigned_classes', JSON.stringify(updated));
-        }
-      } else {
-        // Eliminar del backend
-        await apiFetch(`/api/v1/assigned-classes/${assignedClass.id}`, {
-          method: 'DELETE'
-        });
-      }
+      // Eliminar directamente del backend
+      await apiFetch(`/api/v1/assigned-classes/${assignedClass.id}`, {
+        method: 'DELETE'
+      });
+      
       showToast('Asignatura retirada correctamente.', 'success');
       fetchAssignedClasses();
     } catch (err) {
@@ -159,7 +100,7 @@ export default function SectionCoursesTab({ section }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-gray-100">
         <div>
           <h4 className="text-sm font-bold text-primary">
-            Cursos y Docentes Asignados
+            Cursos Asignados
           </h4>
           <p className="text-[10px] text-secondary/60 mt-0.5">
             {assignedClasses.length} cursos asignados a esta sección
@@ -181,14 +122,6 @@ export default function SectionCoursesTab({ section }) {
         sectionId={section.id}
         educationLevel={section.level}
         gradeLevel={section.grade}
-        onSuccess={fetchAssignedClasses}
-      />
-
-      <AssignTeacherModal
-        isOpen={selectedClassForTeacher !== null}
-        onClose={() => setSelectedClassForTeacher(null)}
-        assignedClassId={selectedClassForTeacher?.id}
-        courseName={selectedClassForTeacher?.name}
         onSuccess={fetchAssignedClasses}
       />
 
@@ -217,7 +150,7 @@ export default function SectionCoursesTab({ section }) {
                 <tr className="bg-slate-50 border-b border-gray-100 text-[10px] font-bold text-secondary uppercase tracking-wider">
                   <th className="py-3 px-4">N°</th>
                   <th className="py-3 px-4">Curso</th>
-                  <th className="py-3 px-4">Docente</th>
+                  <th className="py-3 px-4">Docente Asignado</th>
                   <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -239,29 +172,11 @@ export default function SectionCoursesTab({ section }) {
                     <td className="py-3 px-4 text-secondary font-semibold">
                       <div className="flex items-center gap-2">
                         <User className="w-3.5 h-3.5 text-primary/40 shrink-0" />
-                        <select
-                          value={item.teacherId || ''}
-                          onChange={(e) => handleAssignTeacher(item, e.target.value)}
-                          className="bg-slate-50 border border-gray-200 hover:border-gray-300 focus:border-primary/40 focus:ring-1 focus:ring-primary/20 rounded-xl px-2 py-1.5 text-xs text-primary outline-none transition-all cursor-pointer font-medium max-w-[200px]"
-                        >
-                          <option value="">Sin docente asignado</option>
-                          {teachersList.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.nombres} {t.apellidos}
-                            </option>
-                          ))}
-                        </select>
+                        <span>{item.teacher}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => setSelectedClassForTeacher(item)}
-                          className="p-1.5 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg transition-all cursor-pointer"
-                          title="Asignar/Cambiar docente"
-                        >
-                          <UserPlus className="w-3.5 h-3.5" />
-                        </button>
                         <button
                           onClick={() => handleDeleteCourse(item)}
                           className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all cursor-pointer"

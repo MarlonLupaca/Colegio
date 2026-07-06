@@ -208,7 +208,7 @@ export default function AdminCoursesPage() {
       // 2. Cargar usuarios y secciones para nombres
       Promise.all([
         apiFetch('/api/user/usuarios').catch(() => []),
-        apiFetch('/api/v1/sections').catch(() => [])
+        apiFetch('/api/v1/annual-sections').catch(() => [])
       ]).then(([users, sectionsData]) => {
         setAllUsers(users);
         setAllSections(sectionsData);
@@ -216,9 +216,10 @@ export default function AdminCoursesPage() {
         const mapped = matches.map(m => {
           const uInfo = users.find(u => u.id === m.teacherId);
           const sInfo = sectionsData.find(s => s.id === m.sectionId);
+          const letter = sInfo ? (sInfo.sectionLetter || sInfo.sectionName || '') : '';
           return {
             id: m.id,
-            sectionLabel: sInfo ? `${sInfo.gradeLevel}° "${sInfo.sectionName.toUpperCase()}"` : `Sección ID: ${m.sectionId}`,
+            sectionLabel: sInfo ? `${sInfo.gradeLevel}° "${letter.toUpperCase()}"` : `Sección ID: ${m.sectionId}`,
             teacherName: uInfo ? `${uInfo.nombres} ${uInfo.apellidos}` : `Profesor ID: ${m.teacherId}`
           };
         });

@@ -46,10 +46,11 @@ export default function ParentChildrenPage() {
                 const activeEnrollment = await apiFetch(`/api/enrollment/enrollments/student/${profile.id}/active`).catch(() => null);
                 if (activeEnrollment && activeEnrollment.sectionId) {
                   // Obtener detalles de la sección del section-service
-                  const secDetails = await apiFetch(`/api/v1/sections/${activeEnrollment.sectionId}`).catch(() => null);
+                  const secDetails = await apiFetch(`/api/v1/annual-sections/${activeEnrollment.sectionId}`).catch(() => null);
                   if (secDetails) {
-                    classroomLabel = `${secDetails.gradeLevel}° "${secDetails.sectionName.toUpperCase()}"`;
-                    gradeLabel = secDetails.educationLevel === 'primaria' ? 'Primaria' : 'Secundaria';
+                    const letter = secDetails.sectionLetter || secDetails.sectionName || '';
+                    classroomLabel = `${secDetails.gradeLevel}° "${letter.toUpperCase()}"`;
+                    gradeLabel = secDetails.educationLevel === 'PRIMARIA' ? 'Primaria' : 'Secundaria';
                   }
                 }
               }

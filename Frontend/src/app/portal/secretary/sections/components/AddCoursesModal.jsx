@@ -63,7 +63,6 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, educationL
 
     setSubmitting(true);
     try {
-   
       await Promise.all(
         selectedIds.map(async (courseId) => {
           const payload = {
@@ -74,31 +73,18 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, educationL
             teacherId: null
           };
           
-          try {
-            await apiFetch('/api/v1/assigned-classes', {
-              method: 'POST',
-              body: JSON.stringify(payload)
-            });
-          } catch {
-            // Guardar localmente si el microservicio falla o no está encendido
-            localClasses.push({
-              id: Date.now() + courseId, // ID temporal
-              sectionId: parseInt(sectionId),
-              courseId: parseInt(courseId),
-              teacherId: null
-            });
-          }
+          await apiFetch('/api/v1/assigned-classes', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
         })
       );
 
-      // Guardar cambios locales acumulados
-      localStorage.setItem('local_assigned_classes', JSON.stringify(localClasses));
-
-      showToast(`¡Se asignaron exitosamente ${selectedIds.length} cursos al salón (Híbrido)!`, 'success');
+      showToast(`¡Se asignaron exitosamente ${selectedIds.length} cursos al salón!`, 'success');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      showToast('Error al asignar materias al salón.', 'error');
+      showToast(err.message || 'Error al asignar materias al salón.', 'error');
     } finally {
       setSubmitting(false);
     }

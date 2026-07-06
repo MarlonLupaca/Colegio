@@ -20,8 +20,7 @@ public class AssignedClass {
     private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = "annual_section_id", nullable = false)
-    @NotNull(message = "La sección es obligatoria")
+    @JoinColumn(name = "annual_section_id", nullable = true)
     private AnnualSections annualSections;
 
     @Column(name = "classroom_override_id")
@@ -33,5 +32,14 @@ public class AssignedClass {
 
     @Column(name = "teacher_id", nullable = true)
     private Long teacherId;
+
+    @Transient
+    private String teacherName;
+
+    @Transient
+    private String courseName;
+
+    @Transient
+    private String courseCode;
 
 }
