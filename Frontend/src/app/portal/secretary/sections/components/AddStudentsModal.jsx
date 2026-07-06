@@ -73,7 +73,7 @@ export default function AddStudentsModal({ isOpen, onClose, sectionId, onSuccess
         selectedIds.map(async (studentId) => {
           const payload = {
             studentId: studentId,
-            sectionId: parseInt(sectionId),
+            sectionId: sectionId,
             gradeLevel: 1, // Se ajusta dinámicamente en backend
             academicYear: currentYear,
             condition: 'REGULAR',

@@ -4,6 +4,8 @@ import com.colegio.section_service.prueba.entity.AnnualSections;
 import com.colegio.section_service.prueba.entity.EducationLevel;
 import com.colegio.section_service.prueba.entity.SectionLetter;
 import com.colegio.section_service.prueba.service.AnnualSectionsService;
+import com.colegio.section_service.prueba.entity.AssignedClass;
+import com.colegio.section_service.prueba.service.AssignedClassService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,14 @@ public class AnnualSectionsController {
 
     @Autowired
     private AnnualSectionsService annualSectionsService;
+
+    @Autowired
+    private AssignedClassService assignedClassService;
+
+    @GetMapping("/{id}/courses-with-teachers")
+    public List<AssignedClass> getCoursesWithTeachers(@PathVariable UUID id) {
+        return assignedClassService.getByAnnualSection(id);
+    }
 
     @PostMapping
     public AnnualSections createAnnualSection(@Valid @RequestBody AnnualSections annualSection) {

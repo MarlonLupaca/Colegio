@@ -44,6 +44,11 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.buscarPorCodigo(codigoUsuario));
     }
 
+    @GetMapping("/buscar-id/{id}")
+    public ResponseEntity<UsuarioResponseDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(usuarioService.buscarPorId(id));
+    }
+
     @GetMapping("/rol/{rol}")
     public ResponseEntity<List<UsuarioResponseDTO>> listarPorRol(@PathVariable Rol rol) {
         return ResponseEntity.ok(usuarioService.listarPorRol(rol));

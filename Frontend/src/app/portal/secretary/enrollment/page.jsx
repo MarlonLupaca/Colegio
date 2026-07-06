@@ -33,7 +33,7 @@ export default function EnrollmentPage() {
       setStudents(filteredStudents);
 
       // 2. Secciones de section-service
-      const allSections = await apiFetch('/api/v1/sections');
+      const allSections = await apiFetch('/api/v1/annual-sections');
       setSections(allSections || []);
 
       // 3. Matrículas de enrollment-service
