@@ -1,9 +1,6 @@
 package com.colegio.section_service.prueba.service;
 
-import com.colegio.section_service.prueba.entity.AnnualSections;
-import com.colegio.section_service.prueba.entity.Classroom;
-import com.colegio.section_service.prueba.entity.ClassroomStatus;
-import com.colegio.section_service.prueba.entity.EducationLevel;
+import com.colegio.section_service.prueba.entity.*;
 import com.colegio.section_service.prueba.repository.AnnualSectionsRepository;
 import com.colegio.section_service.prueba.repository.ClassroomRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -45,6 +42,20 @@ public class AnnualSectionsService {
         return annualSectionsRepository.save(annualSection);
     }
 
+    public AnnualSections findByAcademicYearAndEducationLevelAndGradeLevelAndSectionLetter(
+            Integer academicYear,
+            EducationLevel educationLevel,
+            Integer gradeLevel,
+            SectionLetter sectionLetter) {
+        return annualSectionsRepository
+                .findByAcademicYearAndEducationLevelAndGradeLevelAndSectionLetter(
+                        academicYear, educationLevel, gradeLevel, sectionLetter)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Sección no encontrada para año: " + academicYear +
+                                ", nivel: " + educationLevel +
+                                ", grado: " + gradeLevel +
+                                ", sección: " + sectionLetter));
+    }
     public List<AnnualSections> getAllAnnualSections() {
         return annualSectionsRepository.findAll();
     }

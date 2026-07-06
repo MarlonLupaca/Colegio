@@ -18,6 +18,7 @@ export default function SectionCoursesTab({ section }) {
   const { askConfirmation } = useConfirmation();
 
   const [assignedClasses, setAssignedClasses] = useState([]);
+  const [teachersList, setTeachersList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,17 +41,19 @@ export default function SectionCoursesTab({ section }) {
 
       // 4. Obtener lista de docentes completa para resolver nombres
       const teachers = await apiFetch('/api/user/usuarios/rol/DOCENTE').catch(() => []);
+      setTeachersList(teachers || []);
 
       // 5. Cruzar datos
       const mapped = sectionClasses.map(cls => {
         const courseInfo = courses.find(c => c.id === cls.courseId);
-        const teacherInfo = teachers.find(
+        const teacherInfo = (teachers || []).find(
           t => String(t.id) === String(cls.teacherId) || String(t.codigoUsuario) === String(cls.teacherId)
         );
 
         return {
           id: cls.id,
           courseId: cls.courseId,
+          teacherId: cls.teacherId,
           name: courseInfo ? courseInfo.name : 'Curso Académico',
           code: courseInfo ? courseInfo.code : 'CUR-XXXX',
           teacher: teacherInfo
@@ -72,6 +75,28 @@ export default function SectionCoursesTab({ section }) {
   useEffect(() => {
     fetchAssignedClasses();
   }, [section]);
+
+  const handleAssignTeacher = async (item, teacherIdVal) => {
+    try {
+      const payload = {
+        annualSections: {
+          id: section.id
+        },
+        courseId: item.courseId,
+        teacherId: teacherIdVal ? parseInt(teacherIdVal) : null
+      };
+
+      await apiFetch(`/api/v1/assigned-classes/${item.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+
+      showToast('Docente asignado correctamente.', 'success');
+      fetchAssignedClasses();
+    } catch (err) {
+      showToast(err.message || 'Error al asignar docente.', 'error');
+    }
+  };
 
   const handleDeleteCourse = async (assignedClass) => {
     const isConfirmed = await askConfirmation({
@@ -188,8 +213,19 @@ export default function SectionCoursesTab({ section }) {
                     </td>
                     <td className="py-3 px-4 text-secondary font-semibold">
                       <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-primary/40" />
-                        {item.teacher}
+                        <User className="w-3.5 h-3.5 text-primary/40 shrink-0" />
+                        <select
+                          value={item.teacherId || ''}
+                          onChange={(e) => handleAssignTeacher(item, e.target.value)}
+                          className="bg-slate-50 border border-gray-200 hover:border-gray-300 focus:border-primary/40 focus:ring-1 focus:ring-primary/20 rounded-xl px-2 py-1.5 text-xs text-primary outline-none transition-all cursor-pointer font-medium max-w-[200px]"
+                        >
+                          <option value="">Sin docente asignado</option>
+                          {teachersList.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.nombres} {t.apellidos}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-right">

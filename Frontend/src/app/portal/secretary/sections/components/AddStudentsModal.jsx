@@ -21,15 +21,15 @@ export default function AddStudentsModal({ isOpen, onClose, sectionId, onSuccess
         setLoading(true);
         try {
           // 1. Cargar todos los usuarios con ROL ALUMNO de user-service
-          const allUsers = await apiFetch('/api/user/usuarios');
-          const allStudents = allUsers.filter(u => u.rol === 'ALUMNO' && u.activo);
+          const allStudents = await apiFetch('/api/user/usuarios/rol/ALUMNO');
+          const activeStudents = (allStudents || []).filter(u => u.activo);
 
           // 2. Cargar todas las matrículas existentes para filtrar los ya matriculados
           const enrollments = await apiFetch('/api/enrollment/enrollments');
           const enrolledStudentIds = new Set(enrollments.map(e => e.studentId));
 
           // 3. Filtrar alumnos que aún no tienen sección asignada
-          const unassigned = allStudents.filter(s => !enrolledStudentIds.has(s.id));
+          const unassigned = activeStudents.filter(s => !enrolledStudentIds.has(s.id));
           setStudents(unassigned);
           setSelectedIds([]);
         } catch (err) {

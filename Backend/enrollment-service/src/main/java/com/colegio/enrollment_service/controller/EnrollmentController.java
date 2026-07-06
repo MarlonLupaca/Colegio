@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/enrollment/enrollments")
@@ -49,7 +50,7 @@ public class EnrollmentController {
     }
 
     @GetMapping("/section/{sectionId}")
-    public ResponseEntity<List<EnrollmentDTO>> getBySectionId(@PathVariable Long sectionId) {
+    public ResponseEntity<List<EnrollmentDTO>> getBySectionId(@PathVariable UUID sectionId) {
         return ResponseEntity.ok(enrollmentService.getEnrollmentsBySectionId(sectionId));
     }
 

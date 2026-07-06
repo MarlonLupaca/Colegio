@@ -24,7 +24,7 @@ public class ClassScheduleService {
     private static final String SECTION_SERVICE_URL = "http://localhost:8100/api/v1/assigned-classes/";
 
     public ClassSchedule createClassSchedule(ClassSchedule classSchedule) {
-        //alidaciones antes de guardar
+
         validateNoOverlap(classSchedule, null);
         return classScheduleRepository.save(classSchedule);
     }
@@ -61,12 +61,12 @@ public class ClassScheduleService {
         classScheduleRepository.delete(getClassScheduleById(id));
     }
 
-    private UUID getTeacherIdFromAssignedClass(UUID assignedClassId) {
+    private Long getTeacherIdFromAssignedClass(UUID assignedClassId) {
         try {
             Map response = restTemplate.getForObject(
                     SECTION_SERVICE_URL + assignedClassId, Map.class);
             if (response != null && response.get("teacherId") != null) {
-                return UUID.fromString(response.get("teacherId").toString());
+                return Long.valueOf(response.get("teacherId").toString());
             }
         } catch (Exception e) {
             throw new IllegalStateException(
@@ -91,12 +91,11 @@ public class ClassScheduleService {
         }
 
         // REGLA 2: Controlar que el profesor no se cruce
-        // Si necesitas hacerlo sí o sí por backend, asegúrate de que section-service tenga el endpoint: GET /api/v1/assigned-classes/{id}
-        UUID newTeacherId = getTeacherIdFromAssignedClass(classSchedule.getAssignedClassId());
+        Long newTeacherId = getTeacherIdFromAssignedClass(classSchedule.getAssignedClassId());
         for (ClassSchedule existing : sectionSchedules) {
             if (excludeId != null && existing.getId().equals(excludeId)) continue;
 
-            UUID existingTeacherId = getTeacherIdFromAssignedClass(existing.getAssignedClassId());
+            Long existingTeacherId = getTeacherIdFromAssignedClass(existing.getAssignedClassId());
             if (existingTeacherId.equals(newTeacherId)) {
                 throw new IllegalArgumentException(
                         "El profesor ya tiene una clase asignada ese día en ese bloque horario.");
