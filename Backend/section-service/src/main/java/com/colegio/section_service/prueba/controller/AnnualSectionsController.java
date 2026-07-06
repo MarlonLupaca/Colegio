@@ -2,6 +2,7 @@ package com.colegio.section_service.prueba.controller;
 
 import com.colegio.section_service.prueba.entity.AnnualSections;
 import com.colegio.section_service.prueba.entity.EducationLevel;
+import com.colegio.section_service.prueba.entity.SectionLetter;
 import com.colegio.section_service.prueba.service.AnnualSectionsService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,15 @@ public class AnnualSectionsController {
         return annualSectionsService.getByAcademicYearAndEducationLevel(academicYear, educationLevel);
     }
 
+    @GetMapping("/search")
+    public AnnualSections searchSection(
+            @RequestParam Integer academicYear,
+            @RequestParam EducationLevel educationLevel,
+            @RequestParam Integer gradeLevel,
+            @RequestParam SectionLetter sectionLetter) {
+        return annualSectionsService.findByAcademicYearAndEducationLevelAndGradeLevelAndSectionLetter(
+                academicYear, educationLevel, gradeLevel, sectionLetter);
+    }
     @PutMapping("/{id}")
     public AnnualSections updateAnnualSection(
             @PathVariable UUID id,

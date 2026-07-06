@@ -4,6 +4,7 @@ import com.colegio.enrollment_service.dto.AdmissionApplicationDTO;
 import com.colegio.enrollment_service.dto.EnrollmentDTO;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface EnrollmentService {
     // Admission Methods
@@ -16,7 +17,7 @@ public interface EnrollmentService {
     EnrollmentDTO createEnrollment(EnrollmentDTO dto);
     EnrollmentDTO getEnrollmentById(Long id);
     List<EnrollmentDTO> getEnrollmentsByStudentId(Long studentId);
-    List<EnrollmentDTO> getEnrollmentsBySectionId(Long sectionId);
+    List<EnrollmentDTO> getEnrollmentsBySectionId(UUID sectionId);
     EnrollmentDTO updateEnrollmentStatus(Long id, String status);
     void deleteEnrollment(Long id);
     List<EnrollmentDTO> getAllEnrollments();

@@ -12,7 +12,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AnnualSections {
+public class    AnnualSections {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -21,8 +21,11 @@ public class AnnualSections {
     @Column(name = "academic_year", nullable = false)
     private Integer academicYear;  // Ej: 2026, 2027
 
+    @Column(name = "tutor_teacher_id")
+    private Long tutorTeacherId;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "grade", nullable = false)
+    @Column(name = "educationLevel", nullable = false)
     private EducationLevel educationLevel;  // Primaria", "Secundaria"
 
     @Column(name = "grade_level", nullable = false)

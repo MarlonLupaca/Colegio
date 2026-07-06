@@ -1,4 +1,3 @@
-// app/portal/admin/sections/components/SectionInfoTab.jsx
 'use client';
 
 import React, { useState } from 'react';
@@ -7,8 +6,8 @@ import { Edit2, Save, X, Building, Calendar, GraduationCap, Users, BookOpen } fr
 export default function SectionInfoTab({ section, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    classroom: section?.classroom || '',
-    year: section?.year || 2026,
+    room: section?.room || '',
+    academicYear: section?.academicYear || new Date().getFullYear(),
     grade: section?.grade || 1,
     sectionLetter: section?.section || 'A'
   });
@@ -27,8 +26,8 @@ export default function SectionInfoTab({ section, onUpdate }) {
 
   const handleEdit = () => {
     setFormData({
-      classroom: section.classroom || '',
-      year: section.year,
+      room: section.room || '',
+      academicYear: section.academicYear,
       grade: section.grade,
       sectionLetter: section.section
     });
@@ -38,8 +37,8 @@ export default function SectionInfoTab({ section, onUpdate }) {
   const handleSave = () => {
     onUpdate(section.id, {
       ...section,
-      classroom: formData.classroom,
-      year: formData.year,
+      room: formData.room,
+      academicYear: formData.academicYear,
       grade: formData.grade,
       section: formData.sectionLetter
     });
@@ -47,11 +46,13 @@ export default function SectionInfoTab({ section, onUpdate }) {
   };
 
   const getLevelLabel = (level) => {
-    return level === 'primaria' ? 'Primaria' : 'Secundaria';
+    const normalized = level?.toUpperCase();
+    return normalized === 'PRIMARIA' ? 'Primaria' : 'Secundaria';
   };
 
   const getGradeLabel = (grade, level) => {
-    const suffix = level === 'primaria' ? '° Grado' : '° Año';
+    const normalized = level?.toUpperCase();
+    const suffix = normalized === 'PRIMARIA' ? '° Grado' : '° Año';
     return `${grade}${suffix}`;
   };
 
@@ -75,7 +76,7 @@ export default function SectionInfoTab({ section, onUpdate }) {
           <h3 className="text-lg font-bold text-primary">
             {section.grade}° {section.section} - {getLevelLabel(section.level)}
           </h3>
-          <p className="text-xs text-secondary/60 mt-0.5">Año {section.year}</p>
+          <p className="text-xs text-secondary/60 mt-0.5">Año Académico {section.academicYear}</p>
         </div>
         <div className="flex gap-2">
           {isEditing ? (
@@ -109,30 +110,30 @@ export default function SectionInfoTab({ section, onUpdate }) {
 
       {/* Info Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <InfoRow 
-          label="Año Escolar" 
+        <InfoRow
+          label="Año Escolar"
           value={isEditing ? (
             <select
-              value={formData.year}
-              onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+              value={formData.academicYear}
+              onChange={(e) => setFormData({ ...formData, academicYear: parseInt(e.target.value) })}
               className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-primary outline-none focus:border-primary/40"
             >
-              <option value={2024}>2024</option>
-              <option value={2025}>2025</option>
-              <option value={2026}>2026</option>
+              {[2024, 2025, 2026, 2027].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
             </select>
-          ) : section.year} 
-          icon={Calendar} 
+          ) : section.academicYear}
+          icon={Calendar}
         />
 
-        <InfoRow 
-          label="Nivel Educativo" 
-          value={getLevelLabel(section.level)} 
-          icon={GraduationCap} 
+        <InfoRow
+          label="Nivel Educativo"
+          value={getLevelLabel(section.level)}
+          icon={GraduationCap}
         />
 
-        <InfoRow 
-          label="Grado" 
+        <InfoRow
+          label="Grado"
           value={isEditing ? (
             <select
               value={formData.grade}
@@ -140,42 +141,48 @@ export default function SectionInfoTab({ section, onUpdate }) {
               className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-primary outline-none focus:border-primary/40"
             >
               {[1,2,3,4,5,6].map(g => (
-                <option key={g} value={g}>{g}° {section.level === 'primaria' ? 'Grado' : 'Año'}</option>
+                <option key={g} value={g}>{g}° {section.level?.toUpperCase() === 'PRIMARIA' ? 'Grado' : 'Año'}</option>
               ))}
             </select>
-          ) : getGradeLabel(section.grade, section.level)} 
-          icon={Users} 
+          ) : getGradeLabel(section.grade, section.level)}
+          icon={Users}
         />
 
-        <InfoRow 
-          label="Sección" 
+        <InfoRow
+          label="Sección"
           value={isEditing ? (
             <select
               value={formData.sectionLetter}
               onChange={(e) => setFormData({ ...formData, sectionLetter: e.target.value })}
               className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-primary outline-none focus:border-primary/40"
             >
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-              <option value="D">D</option>
+              {['A','B','C','D','E'].map(l => (
+                <option key={l} value={l}>{l}</option>
+              ))}
             </select>
-          ) : section.section} 
-          icon={Users} 
+          ) : section.section}
+          icon={Users}
         />
 
-        <InfoRow 
-          label="Aula Asignada" 
-          value={isEditing ? (
-            <input
-              type="text"
-              value={formData.classroom}
-              onChange={(e) => setFormData({ ...formData, classroom: e.target.value })}
-              placeholder="Ej: 101 - Pabellón A"
-              className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-primary outline-none focus:border-primary/40"
-            />
-          ) : section.classroom || 'No asignada'} 
-          icon={Building} 
+        {/* Aula: muestra texto compuesto de roomNumber + building */}
+        <InfoRow
+          label="Aula Asignada"
+          value={section.room || 'No asignada'}
+          icon={Building}
+        />
+
+        {/* Capacidad del aula */}
+        <InfoRow
+          label="Capacidad Máxima"
+          value={section.maxStudents ? `${section.maxStudents} alumnos` : 'No especificada'}
+          icon={Users}
+        />
+
+        {/* Tutor */}
+        <InfoRow
+          label="Profesor Tutor"
+          value={section.tutor || 'Sin asignar'}
+          icon={GraduationCap}
         />
       </div>
 

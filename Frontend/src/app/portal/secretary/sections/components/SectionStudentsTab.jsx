@@ -22,16 +22,26 @@ export default function SectionStudentsTab({ section }) {
     if (!section?.id) return;
     setLoading(true);
     try {
-      // 1. Obtener inscripciones de la sección
-      const enrollments = await apiFetch(`/api/enrollment/enrollments/section/${section.id}`);
-      
-      // 2. Obtener todos los alumnos registrados
-      const allUsers = await apiFetch('/api/user/usuarios');
-      const filteredStudents = allUsers ? allUsers.filter(u => u.rol === 'ALUMNO') : [];
+      // 1. Buscar sección
+      const academicYear = section.academicYear || 2026;
+      const educationLevel = (section.level || '').toUpperCase();
+      const gradeLevel = section.grade || 1;
+      const sectionLetter = (section.section || '').toUpperCase();
 
-      // 3. Cruzar datos
+      const sectionSearch = await apiFetch(
+        `/api/v1/annual-sections/search?academicYear=${academicYear}&educationLevel=${educationLevel}&gradeLevel=${gradeLevel}&sectionLetter=${sectionLetter}`
+      );
+      const sectionId = sectionSearch?.id || section.id;
+
+      // 2. Obtener inscripciones de la sección
+      const enrollments = await apiFetch(`/api/enrollment/enrollments/section/${sectionId}`);
+      
+      // 3. Obtener todos los alumnos registrados
+      const filteredStudents = await apiFetch('/api/user/usuarios/rol/ALUMNO');
+
+      // 4. Cruzar datos
       const studentsInSection = enrollments.map(en => {
-        const studentInfo = filteredStudents.find(st => st.id === en.studentId);
+        const studentInfo = (filteredStudents || []).find(st => st.id === en.studentId);
         return {
           id: en.id,
           studentId: en.studentId,

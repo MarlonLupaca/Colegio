@@ -21,12 +21,18 @@ const SECUNDARIA_GRADES = [
   { value: '5', label: '5° año de Secundaria' },
 ];
 
+
+const EDUCATION_LEVELS = [
+  { value: 'PRIMARIA', label: 'Primaria' },
+  { value: 'SECUNDARIA', label: 'Secundaria' },
+];
+
 const EMPTY_FORM = {
   name: '',
   code: '',
   academicArea: '',
   description: '',
-  educationLevel: 'primaria',
+  educationLevel: 'PRIMARIA',
   gradeLevel: '1',
   hoursPerWeek: '4',
   isActive: true,
@@ -38,7 +44,7 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
-  // Sincronizar y limpiar el formulario al abrir/cambiar
+
   useEffect(() => {
     if (isOpen) {
       if (formType === 'edit' && currentCourse) {
@@ -47,7 +53,7 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
           code: currentCourse.code || '',
           academicArea: currentCourse.academicArea || '',
           description: currentCourse.description || '',
-          educationLevel: currentCourse.educationLevel || 'primaria',
+          educationLevel: currentCourse.educationLevel?.toUpperCase() || 'PRIMARIA',
           gradeLevel: currentCourse.gradeLevel?.toString() || '1',
           hoursPerWeek: currentCourse.hoursPerWeek?.toString() || '4',
           isActive: currentCourse.isActive ?? true,
@@ -67,7 +73,7 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
     setFormData((prev) => {
       const updated = { ...prev, [name]: nextValue };
       // Auto-clamp grade when level changes
-      if (name === 'educationLevel' && nextValue === 'secundaria' && parseInt(prev.gradeLevel) > 5) {
+      if (name === 'educationLevel' && nextValue === 'SECUNDARIA' && parseInt(prev.gradeLevel) > 5) {
         updated.gradeLevel = '5';
       }
       return updated;
@@ -77,6 +83,7 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
 
   const validate = () => {
     const e = {};
+    if (!formData.code.trim()) e.code = 'El código es obligatorio';
     if (!formData.name.trim()) e.name = 'El nombre es obligatorio';
     if (!formData.academicArea) e.academicArea = 'El área académica es obligatoria';
     if (!formData.hoursPerWeek || parseInt(formData.hoursPerWeek) <= 0)
@@ -90,7 +97,7 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
     if (validate()) onSubmit(formData);
   };
 
-  const gradeOptions = formData.educationLevel === 'primaria' ? PRIMARIA_GRADES : SECUNDARIA_GRADES;
+  const gradeOptions = formData.educationLevel === 'PRIMARIA' ? PRIMARIA_GRADES : SECUNDARIA_GRADES;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
@@ -117,6 +124,33 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-left overflow-y-auto max-h-[80vh]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Code */}
+            <div className="space-y-1 col-span-2">
+              <label className="text-[10px] font-bold text-secondary uppercase tracking-wide flex items-center gap-1.5">
+                Código del Curso *
+                {formType === 'edit' && (
+                  <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full normal-case tracking-normal">
+                    🔒 No editable
+                  </span>
+                )}
+              </label>
+              <input
+                type="text"
+                name="code"
+                value={formData.code}
+                onChange={handleChange}
+                placeholder="Ej. REL-001, MAT-203"
+                disabled={formType === 'edit'}
+                className={`${inputBase} uppercase ${
+                  formType === 'edit'
+                    ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none'
+                    : errors.code
+                      ? 'border-rose-400 ring-1 ring-rose-200'
+                      : 'border-gray-200 focus:border-primary/40'
+                }`}
+              />
+              {errors.code && <p className="text-[10px] text-rose-600 font-bold">{errors.code}</p>}
+            </div>
             {/* Name */}
             <div className="space-y-1 col-span-2">
               <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Nombre del Curso *</label>
@@ -172,8 +206,9 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
                 onChange={handleChange}
                 className={`${inputBase} cursor-pointer border-gray-200 focus:border-primary/40`}
               >
-                <option value="primaria">Primaria</option>
-                <option value="secundaria">Secundaria</option>
+                {EDUCATION_LEVELS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
               </select>
             </div>
 

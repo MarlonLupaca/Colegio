@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "enrollments")
@@ -24,7 +25,7 @@ public class Enrollment {
     private Long studentId;
 
     @Column(name = "section_id", nullable = false)
-    private Long sectionId;
+    private UUID sectionId;
 
     @Column(name = "grade_level", nullable = false, length = 50)
     private String gradeLevel;
