@@ -19,8 +19,9 @@ public interface AnnualSectionsRepository extends JpaRepository<AnnualSections, 
 
     List<AnnualSections> findByAcademicYearAndEducationLevel(Integer academicYear, EducationLevel educationLevel);
 
-    Optional<AnnualSections> findByAcademicYearAndEducationLevelAndSectionLetter(
-            Integer academicYear, EducationLevel educationLevel, SectionLetter sectionLetter);
+    Optional<AnnualSections> findByAcademicYearAndEducationLevelAndGradeLevelAndSectionLetter(
+            Integer academicYear, EducationLevel educationLevel, Integer gradeLevel, SectionLetter sectionLetter);
 
-
+    // saber si un aula ya está en uso en un año específico
+    Optional<AnnualSections> findByClassroomIdAndAcademicYear(UUID classroomId, Integer academicYear);
 }

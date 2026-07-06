@@ -20,6 +20,7 @@ export default function SectionCoursesTab({ section }) {
   const { askConfirmation } = useConfirmation();
 
   const [assignedClasses, setAssignedClasses] = useState([]);
+  const [teachersList, setTeachersList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -33,45 +34,39 @@ export default function SectionCoursesTab({ section }) {
     if (!section?.id) return;
     setLoading(true);
     try {
-      // 1. Obtener clases vinculadas en la base de datos
-      const dbClasses = await apiFetch(`/api/v1/assigned-classes/section/${section.id}`).catch(() => []);
+      // 1. Obtener todas las clases vinculadas
+      const allCls = await apiFetch('/api/v1/assigned-classes').catch(() => []);
       
-      // 2. Obtener clases vinculadas localmente en localStorage
-      const localDataStr = localStorage.getItem('local_assigned_classes');
-      const localClasses = localDataStr ? JSON.parse(localDataStr) : [];
-      const sectionLocalClasses = localClasses.filter(c => c.sectionId === section.id);
-
-      // Combinar base de datos con localStorage
-      const allClasses = [...dbClasses, ...sectionLocalClasses.map(lc => ({
-        id: lc.id,
-        courseId: lc.courseId,
-        teacherId: lc.teacherId,
-        isLocal: true
-      }))];
+      // 2. Filtrar por la sección actual (comparando IDs de UUIDs)
+      const sectionClasses = allCls.filter(
+        cls => cls.annualSections?.id === section.id
+      );
 
       // 3. Obtener lista de cursos completa
       const courses = await apiFetch('/api/v1/courses').catch(() => []);
 
-      // 4. Obtener lista de usuarios para cruzar nombres de docentes
-      const users = await apiFetch('/api/user/usuarios').catch(() => []);
+      // 4. Obtener lista de docentes completa para resolver nombres
+      const teachers = await apiFetch('/api/user/usuarios/rol/DOCENTE').catch(() => []);
+      setTeachersList(teachers || []);
 
       // 5. Cruzar datos
-      const mapped = allClasses.map(cls => {
+      const mapped = sectionClasses.map(cls => {
         const courseInfo = courses.find(c => c.id === cls.courseId);
-        
-        let teacherLabel = 'Sin docente asignado';
-        if (cls.teacherId) {
-          const teacherInfo = users.find(u => u.id === cls.teacherId);
-          teacherLabel = teacherInfo ? `${teacherInfo.nombres} ${teacherInfo.apellidos}` : `Profesor ID: ${cls.teacherId}`;
-        }
+        const teacherInfo = (teachers || []).find(
+          t => String(t.id) === String(cls.teacherId) || String(t.codigoUsuario) === String(cls.teacherId)
+        );
 
         return {
           id: cls.id,
           courseId: cls.courseId,
+          teacherId: cls.teacherId,
           name: courseInfo ? courseInfo.name : 'Curso Académico',
           code: courseInfo ? courseInfo.code : 'CUR-XXXX',
-          teacher: teacherLabel,
-          isLocal: cls.isLocal || false
+          teacher: teacherInfo
+            ? `${teacherInfo.nombres} ${teacherInfo.apellidos}`
+            : cls.teacherId
+              ? `Profesor ID: ${cls.teacherId}`
+              : 'Sin docente asignado'
         };
       });
 
@@ -86,6 +81,28 @@ export default function SectionCoursesTab({ section }) {
   useEffect(() => {
     fetchAssignedClasses();
   }, [section]);
+
+  const handleAssignTeacher = async (item, teacherIdVal) => {
+    try {
+      const payload = {
+        annualSections: {
+          id: section.id
+        },
+        courseId: item.courseId,
+        teacherId: teacherIdVal ? parseInt(teacherIdVal) : null
+      };
+
+      await apiFetch(`/api/v1/assigned-classes/${item.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+
+      showToast('Docente asignado correctamente.', 'success');
+      fetchAssignedClasses();
+    } catch (err) {
+      showToast(err.message || 'Error al asignar docente.', 'error');
+    }
+  };
 
   const handleDeleteCourse = async (assignedClass) => {
     const isConfirmed = await askConfirmation({
@@ -162,6 +179,8 @@ export default function SectionCoursesTab({ section }) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         sectionId={section.id}
+        educationLevel={section.level}
+        gradeLevel={section.grade}
         onSuccess={fetchAssignedClasses}
       />
 
@@ -219,8 +238,19 @@ export default function SectionCoursesTab({ section }) {
                     </td>
                     <td className="py-3 px-4 text-secondary font-semibold">
                       <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-primary/40" />
-                        <span>{item.teacher}</span>
+                        <User className="w-3.5 h-3.5 text-primary/40 shrink-0" />
+                        <select
+                          value={item.teacherId || ''}
+                          onChange={(e) => handleAssignTeacher(item, e.target.value)}
+                          className="bg-slate-50 border border-gray-200 hover:border-gray-300 focus:border-primary/40 focus:ring-1 focus:ring-primary/20 rounded-xl px-2 py-1.5 text-xs text-primary outline-none transition-all cursor-pointer font-medium max-w-[200px]"
+                        >
+                          <option value="">Sin docente asignado</option>
+                          {teachersList.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.nombres} {t.apellidos}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-right">

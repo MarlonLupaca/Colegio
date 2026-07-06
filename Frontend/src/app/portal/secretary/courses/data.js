@@ -110,9 +110,11 @@ export const academicAreas = [
   { value: "comunicacion", label: "Comunicación" },
   { value: "ciencia_tecnologia", label: "Ciencia y Tecnología" },
   { value: "ciencias_sociales", label: "Ciencias Sociales" },
-  { value: "desarrollo_personal", label: "Desarrollo Personal" },
+  { value: "desarrollo_personal_civica", label: "Desarrollo Personal" },
   { value: "ingles", label: "Inglés" },
   { value: "educacion_fisica", label: "Educación Física" },
   { value: "arte_cultura", label: "Arte y Cultura" },
-  { value: "educacion_religiosa", label: "Educación Religiosa" }
+  { value: "ingles", label: "Ingles" },
+  { value: "educacion_religiosa", label: "Educación Religiosa" },
+  { value: "educacion_trabajo", label: "Educación trabajo" },
 ];

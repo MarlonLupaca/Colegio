@@ -16,8 +16,8 @@ public class AssignedClassService {
     private AssignedClassRepository assignedClassRepository;
 
     public AssignedClass createAssignedClass(AssignedClass assignedClass) {
-        boolean alreadyExists = assignedClassRepository.existsByAnnualSectionIdAndCourseId(
-                assignedClass.getAnnualSection().getId(),
+        boolean alreadyExists = assignedClassRepository.existsByAnnualSectionsIdAndCourseId(
+                assignedClass.getAnnualSections().getId(),
                 assignedClass.getCourseId()
         );
 
@@ -39,11 +39,11 @@ public class AssignedClassService {
                         "Clase asignada no encontrada con ID: " + id));
     }
 
-    public List<AssignedClass> getByAnnualSection(Long annualSectionId) {
-        return assignedClassRepository.findByAnnualSectionId(annualSectionId);
+    public List<AssignedClass> getByAnnualSection(UUID annualSectionId) {
+        return assignedClassRepository.findByAnnualSectionsId(annualSectionId);
     }
 
-    public List<AssignedClass> getByCourse(Long courseId) {
+    public List<AssignedClass> getByCourse(UUID courseId) {
         return assignedClassRepository.findByCourseId(courseId);
     }
 
@@ -53,7 +53,7 @@ public class AssignedClassService {
 
     public AssignedClass updateAssignedClass(UUID id, AssignedClass details) {
         AssignedClass assignedClass = getAssignedClassById(id);
-        assignedClass.setAnnualSection(details.getAnnualSection());
+        assignedClass.setAnnualSections(details.getAnnualSections());
         assignedClass.setCourseId(details.getCourseId());
         assignedClass.setTeacherId(details.getTeacherId());
         return assignedClassRepository.save(assignedClass);

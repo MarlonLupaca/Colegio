@@ -1,6 +1,7 @@
 package com.colegio.course_service.prueba.controller;
 
 import com.colegio.course_service.prueba.entity.Course;
+import com.colegio.course_service.prueba.entity.EducationLevel;
 import com.colegio.course_service.prueba.service.CourseService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,15 +42,14 @@ public class CourseController {
         return courseService.getCourseById(id);
     }
 
-    @GetMapping("/filter/education-level") //GET /api/v1/courses/filter/education-level?educationLevel=primaria
+    @GetMapping("/filter/education-level")
     public List<Course> getCoursesByEducationLevel(
-            @RequestParam String educationLevel) {
+            @RequestParam EducationLevel educationLevel) {
         return courseService.getCoursesByEducationLevel(educationLevel);
     }
-
-    @GetMapping("/filter/education-level-and-grade")//api/v1/courses/filter/education-level-and-grade?educationLevel=primaria&gradeLevel=3
+    @GetMapping("/filter/education-level-and-grade")
     public List<Course> getCoursesByEducationLevelAndGrade(
-            @RequestParam String educationLevel,
+            @RequestParam EducationLevel educationLevel,
             @RequestParam Integer gradeLevel) {
         return courseService.getCoursesByEducationLevelAndGrade(educationLevel, gradeLevel);
     }

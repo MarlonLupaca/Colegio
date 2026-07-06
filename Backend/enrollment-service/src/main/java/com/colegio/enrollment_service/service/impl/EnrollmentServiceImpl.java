@@ -147,7 +147,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EnrollmentDTO> getEnrollmentsBySectionId(Long sectionId) {
+    public List<EnrollmentDTO> getEnrollmentsBySectionId(UUID sectionId) {
         return enrollmentRepository.findBySectionId(sectionId)
                 .stream().map(this::mapEnrollmentToDTO).collect(Collectors.toList());
     }

@@ -14,6 +14,8 @@ import CourseModal from './components/CourseModal';
 import CourseTeacherAssignModal from './components/CourseTeacherAssignModal';
 import { academicAreas } from './data';
 
+const COURSES_ENDPOINT = '/api/v1/courses';
+
 export default function AdminCoursesPage() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -22,6 +24,7 @@ export default function AdminCoursesPage() {
   // Data & Loading States
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   // Modal para visualización de detalles
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -32,13 +35,18 @@ export default function AdminCoursesPage() {
 
   // Cargar cursos reales del backend
   const fetchCourses = async () => {
-    try {
-      const data = await apiFetch('/api/v1/courses');
-      setCourses(data || []);
-    } catch (err) {
-      console.error('Error cargando cursos de la BD:', err.message);
-    }
-  };
+  setLoading(true);
+  setLoadError(null);
+  try {
+    const data = await apiFetch(COURSES_ENDPOINT);
+    setCourses(data || []);
+  } catch (err) {
+    setLoadError(err.message);
+    showToast('Error al cargar los cursos', 'error');
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchCourses();
@@ -64,7 +72,7 @@ export default function AdminCoursesPage() {
     const matchStatus = statusFilter === 'todos' ||
       (statusFilter === 'activos' && c.isActive) ||
       (statusFilter === 'inactivos' && !c.isActive);
-    const matchLevel = levelFilter === 'todos' || c.educationLevel === levelFilter;
+    const matchLevel = levelFilter === 'todos' || c.educationLevel?.toUpperCase() === levelFilter.toUpperCase();
     const matchGrade = gradeFilter === 'todos' || c.gradeLevel === parseInt(gradeFilter);
     return matchSearch && matchStatus && matchLevel && matchGrade;
   });
@@ -103,11 +111,12 @@ export default function AdminCoursesPage() {
         description: formData.description?.trim() || '',
         gradeLevel: parseInt(formData.gradeLevel),
         hoursPerWeek: parseInt(formData.hoursPerWeek),
-        educationLevel: formData.educationLevel.toLowerCase()
+        // educationLevel se envía en MAYÚSCULAS según el enum del backend (PRIMARIA / SECUNDARIA)
+        educationLevel: formData.educationLevel.toUpperCase()
       };
 
       if (formModal.type === 'create') {
-        const result = await apiFetch('/api/v1/courses', {
+        const result = await apiFetch(COURSES_ENDPOINT, {
           method: 'POST',
           body: JSON.stringify(parsedBody)
         });
@@ -266,7 +275,8 @@ export default function AdminCoursesPage() {
       />
 
       {/* Course list */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden text-left">
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+       
         {filteredCourses.length > 0 ? (
           <>
             <CourseTable

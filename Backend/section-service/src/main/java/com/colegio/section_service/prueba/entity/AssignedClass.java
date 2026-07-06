@@ -22,11 +22,14 @@ public class AssignedClass {
     @ManyToOne
     @JoinColumn(name = "annual_section_id", nullable = false)
     @NotNull(message = "La sección es obligatoria")
-    private Section annualSection;
+    private AnnualSections annualSections;
+
+    @Column(name = "classroom_override_id")
+    private UUID classroomOverrideId;
 
     @Column(name = "course_id", nullable = false)
     @NotNull(message = "El curso es obligatorio")
-    private Long courseId;
+    private UUID courseId;
 
     @Column(name = "teacher_id", nullable = true)
     private Long teacherId;

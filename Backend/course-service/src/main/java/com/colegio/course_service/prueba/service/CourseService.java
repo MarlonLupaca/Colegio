@@ -1,6 +1,7 @@
 package com.colegio.course_service.prueba.service;
 
 import com.colegio.course_service.prueba.entity.Course;
+import com.colegio.course_service.prueba.entity.EducationLevel;
 import com.colegio.course_service.prueba.repository.CourseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,31 +16,29 @@ public class CourseService {
     @Autowired
     private CourseRepository courseRepository;
 
-
-    //Crear Curso
+    //crear clase
     public Course saveCourse(Course course) {
 
-        if ("secundaria".equalsIgnoreCase(course.getEducationLevel()) && course.getGradeLevel() > 5) {
+        if (EducationLevel.SECUNDARIA.equals(course.getEducationLevel()) && course.getGradeLevel() > 5) {
             throw new IllegalArgumentException("En el Perú, el nivel secundaria solo tiene hasta 5 grados.");
         }
 
-        // Generación automática del código si no se especifica o está vacío
+        // Generación automática del código
         if (course.getCode() == null || course.getCode().trim().isEmpty()) {
             String prefix = "CUR-";
             var ultimoCursoOpt = courseRepository.findFirstByCodeStartingWithOrderByCodeDesc(prefix);
             int nextNumber = 1;
-            
+
             if (ultimoCursoOpt.isPresent()) {
                 String ultimoCodigo = ultimoCursoOpt.get().getCode();
                 try {
                     String numeroStr = ultimoCodigo.substring(prefix.length());
                     nextNumber = Integer.parseInt(numeroStr) + 1;
                 } catch (Exception e) {
-                    // Fallback en caso de formato no numérico
                     nextNumber = (int) (courseRepository.count() + 1);
                 }
             }
-            
+
             String nuevoCodigo = String.format("%s%04d", prefix, nextNumber);
             course.setCode(nuevoCodigo);
         }
@@ -65,34 +64,22 @@ public class CourseService {
     }
 
     // Filtrar por nivel educativo
-    public List<Course> getCoursesByEducationLevel(String educationLevel) {
-        // Validar que el nivel sea válido
-        if (!"primaria".equalsIgnoreCase(educationLevel) && !"secundaria".equalsIgnoreCase(educationLevel)) {
-            throw new IllegalArgumentException("El nivel educativo debe ser 'primaria' o 'secundaria'");
-        }
-        return courseRepository.findByEducationLevelIgnoreCase(educationLevel);
+    public List<Course> getCoursesByEducationLevel(EducationLevel educationLevel) {
+        return courseRepository.findByEducationLevel(educationLevel);
     }
 
     //Filtrar por nivel educativo + grado
-    public List<Course> getCoursesByEducationLevelAndGrade(String educationLevel, Integer gradeLevel) {
-        // Validar que el nivel sea válido
-        if (!"primaria".equalsIgnoreCase(educationLevel) && !"secundaria".equalsIgnoreCase(educationLevel)) {
-            throw new IllegalArgumentException("El nivel educativo debe ser 'primaria' o 'secundaria'");
-        }
-
-        // Validar que el grado esté en el rango correcto
+    public List<Course> getCoursesByEducationLevelAndGrade(EducationLevel educationLevel, Integer gradeLevel) {
         if (gradeLevel < 1 || gradeLevel > 6) {
             throw new IllegalArgumentException("El grado debe estar entre 1 y 6");
         }
 
-        // Validar lógica de negocio específica para secundaria
-        if ("secundaria".equalsIgnoreCase(educationLevel) && gradeLevel > 5) {
+        if (EducationLevel.SECUNDARIA.equals(educationLevel) && gradeLevel > 5) {
             throw new IllegalArgumentException("En el Perú, el nivel secundaria solo tiene hasta 5 grados.");
         }
 
-        return courseRepository.findByEducationLevelIgnoreCaseAndGradeLevel(educationLevel, gradeLevel);
+        return courseRepository.findByEducationLevelAndGradeLevel(educationLevel, gradeLevel);
     }
-
     //Obtener curso por ID
     public Course getCourseById(UUID id) {
         return courseRepository.findById(id)
@@ -109,6 +96,11 @@ public class CourseService {
         course.setEducationLevel(courseDetails.getEducationLevel());
         course.setGradeLevel(courseDetails.getGradeLevel());
         course.setAcademicArea(courseDetails.getAcademicArea());
+
+        // Validación extra por si cambian a secundaria con grado > 5 en la actualización
+        if (EducationLevel.SECUNDARIA.equals(course.getEducationLevel()) && course.getGradeLevel() > 5) {
+            throw new IllegalArgumentException("En el Perú, el nivel secundaria solo tiene hasta 5 grados.");
+        }
 
         return courseRepository.save(course);
     }

@@ -1,17 +1,21 @@
 
 export const classroomStatuses = [
   { value: 'DISPONIBLE', label: 'Disponible' },
-  { value: 'OCUPADO', label: 'Ocupado' },
   { value: 'MANTENIMIENTO', label: 'En Mantenimiento' },
   { value: 'INACTIVO', label: 'Inactivo' }
+
 ];
 
 export const classroomTypes = [
   { value: 'AULA_NORMAL', label: 'Aula Normal' },
   { value: 'LABORATORIO', label: 'Laboratorio' },
+  { value: 'TALLER', label: 'Taller' },
   { value: 'AUDITORIO', label: 'Auditorio' },
-  { value: 'SALA_INFORMATICA', label: 'Sala de Informática' },
-  { value: 'TALLER', label: 'Taller' }
+  { value: 'GIMNASIO', label: 'Gimnasio' },
+  { value: 'SALA_COMPUTACION', label: 'Sala de Computación' },
+  { value: 'SALA_ARTES', label: 'Sala de Artes' },
+  { value: 'OTRO', label: 'Otro...' }
+
 ];
 
 export const buildings = [

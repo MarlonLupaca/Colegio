@@ -1,6 +1,7 @@
 package com.colegio.course_service.prueba.repository;
 
 import com.colegio.course_service.prueba.entity.Course;
+import com.colegio.course_service.prueba.entity.EducationLevel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,16 +13,14 @@ import java.util.UUID;
 public interface CourseRepository extends JpaRepository<Course, UUID> {
 
     Optional<Course> findByCode(String code);
-    
-    Optional<Course> findFirstByCodeStartingWithOrderByCodeDesc(String prefix);
 
-    List<Course> findByEducationLevelAndGradeLevel(String educationLevel, Integer gradeLevel);
+    Optional<Course> findFirstByCodeStartingWithOrderByCodeDesc(String prefix);
 
     List<Course> findByIsActiveTrue();
 
     List<Course> findByIsActiveFalse();
 
-    List<Course> findByEducationLevelIgnoreCase(String educationLevel);
+    List<Course> findByEducationLevel(EducationLevel educationLevel);
 
-    List<Course> findByEducationLevelIgnoreCaseAndGradeLevel(String educationLevel, Integer gradeLevel);
+    List<Course> findByEducationLevelAndGradeLevel(EducationLevel educationLevel, Integer gradeLevel);
 }

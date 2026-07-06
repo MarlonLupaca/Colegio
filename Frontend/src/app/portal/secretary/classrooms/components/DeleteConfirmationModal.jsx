@@ -19,9 +19,9 @@ export default function DeleteConfirmationModal({
           <Trash2 className="w-5 h-5" />
         </div>
 
-        <h3 className="font-bold text-sm text-primary tracking-tight">¿Desactivar Aula?</h3>
+        <h3 className="font-bold text-sm text-primary tracking-tight">¿Eliminar Aula?</h3>
         <p className="text-xs text-secondary mt-2 leading-relaxed">
-          Estás a punto de desactivar el aula <strong className="text-primary">&quot;{classroom.roomNumber}&quot;</strong> en el edificio {classroom.building}.
+          Estás a punto de eliminar el aula <strong className="text-primary">&quot;{classroom.roomNumber}&quot;</strong> en el edificio {classroom.building}.
           Las aulas desactivadas no podrán ser asignadas a nuevas secciones.
         </p>
 
@@ -36,7 +36,7 @@ export default function DeleteConfirmationModal({
             onClick={onConfirm}
             className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors cursor-pointer select-none"
           >
-            Desactivar
+            Eliminar
           </button>
         </div>
       </div>

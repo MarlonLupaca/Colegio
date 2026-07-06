@@ -1,11 +1,10 @@
-// app/portal/admin/classrooms/page.jsx
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect,useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { DoorOpen, Plus, ArrowLeft } from 'lucide-react';
 
-import { initialClassrooms } from './data';
+import { apiFetch } from '@/config/api';
 import ClassroomFilters from './components/ClassroomFilters';
 import ClassroomTable from './components/ClassroomTable';
 import ClassroomMobileList from './components/ClassroomMobileList';
@@ -13,11 +12,14 @@ import ClassroomModal from './components/ClassroomModal';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import ToastNotification from './components/ToastNotification';
 
+const CLASSROOMS_ENDPOINT='/api/v1/classrooms';
+
 export default function AdminClassroomsPage() {
   const router = useRouter();
-  
-  // ✅ SOLO DATOS ESTÁTICOS - SIN localStorage
-  const [classrooms, setClassrooms] = useState(initialClassrooms);
+
+  const [classrooms, setClassrooms] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   // ── Toast ──
   const [toast, setToast] = useState(null);
@@ -26,6 +28,25 @@ export default function AdminClassroomsPage() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   }, []);
+
+  const fetchClassrooms = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const data = await apiFetch(CLASSROOMS_ENDPOINT);
+      setClassrooms(data);
+    } catch (err) {
+      setLoadError(err.message);
+      showToast('Error al cargar las aulas', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchClassrooms();
+  }, [fetchClassrooms]);
+
 
   // ── Filters ──
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,35 +79,41 @@ export default function AdminClassroomsPage() {
   const openEdit = (classroom) => setFormModal({ isOpen: true, type: 'edit', classroom });
   const closeForm = () => setFormModal((prev) => ({ ...prev, isOpen: false }));
 
-  const handleFormSubmit = (formData) => {
-    const now = new Date().toISOString();
+  const handleFormSubmit = async (formData) => {
+  const payload = {
+    building: formData.building,
+    roomNumber: formData.roomNumber,
+    maxCapacity: parseInt(formData.maxCapacity),
+    status: formData.status,
+    type: formData.type,
+  };
+
+  try {
     if (formModal.type === 'create') {
-      const newClassroom = {
-        id: crypto.randomUUID(),
-        ...formData,
-        maxCapacity: parseInt(formData.maxCapacity),
-        createdAt: now,
-        updatedAt: now,
-      };
-      setClassrooms((prev) => [newClassroom, ...prev]);
-      showToast(`Aula "${newClassroom.roomNumber}" creada con éxito`);
+      const created = await apiFetch(CLASSROOMS_ENDPOINT, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      setClassrooms((prev) => [created, ...prev]);
+      showToast(`Aula "${created.roomNumber}" creada con éxito`);
     } else {
+      const id = formModal.classroom.id;
+      const updated = await apiFetch(`${CLASSROOMS_ENDPOINT}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
       setClassrooms((prev) =>
-        prev.map((c) =>
-          c.id === formModal.classroom.id
-            ? {
-                ...c,
-                ...formData,
-                maxCapacity: parseInt(formData.maxCapacity),
-                updatedAt: now,
-              }
-            : c
-        )
+        prev.map((c) => (c.id === id ? updated : c))
       );
-      showToast(`Aula "${formData.roomNumber}" actualizada correctamente`);
+      showToast(`Aula "${updated.roomNumber}" actualizada correctamente`);
     }
     closeForm();
-  };
+  } catch (err) {
+    const action = formModal.type === 'create' ? 'crear' : 'actualizar';
+    showToast(err.message || `Error al ${action} el aula`, 'error');
+    // No cerramos el modal si falló
+  }
+};
 
   // ── Delete modal ──
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, classroom: null });
@@ -94,18 +121,22 @@ export default function AdminClassroomsPage() {
   const openDelete = (classroom) => setDeleteModal({ isOpen: true, classroom });
   const closeDelete = () => setDeleteModal({ isOpen: false, classroom: null });
 
-  const handleConfirmDelete = () => {
-    const { classroom } = deleteModal;
-    setClassrooms((prev) =>
-      prev.map((c) =>
-        c.id === classroom.id
-          ? { ...c, status: 'INACTIVO', updatedAt: new Date().toISOString() }
-          : c
-      )
-    );
-    showToast(`Aula "${classroom.roomNumber}" desactivada correctamente`);
+  const handleConfirmDelete = async () => {
+  const { classroom } = deleteModal;
+  try {
+    // Ahora sí es un DELETE real: el aula desaparece de la BD
+    await apiFetch(`${CLASSROOMS_ENDPOINT}/${classroom.id}`, {
+      method: 'DELETE',
+    });
+
+    setClassrooms((prev) => prev.filter((c) => c.id !== classroom.id));
+    showToast(`Aula "${classroom.roomNumber}" eliminada correctamente`);
     closeDelete();
-  };
+  } catch (err) {
+    showToast(err.message || 'Error al eliminar el aula', 'error');
+    // modal abierto para que el usuario reintente
+  }
+};
 
   return (
     <div className="w-full pb-12 space-y-6 animate-fade-in relative">

@@ -39,7 +39,12 @@ spring:
         - id: section-service
           uri: lb://SECTION-SERVICE
           predicates:
-            - Path=/api/v1/sections/**
+            - Path=/api/v1/annual-sections/**
+
+        - id: classroom-service-route
+          uri: lb://SECTION-SERVICE
+          predicates:
+            - Path=/api/v1/classrooms/**
 
         - id: assigned-classes-service
           uri: lb://SECTION-SERVICE
@@ -60,6 +65,20 @@ spring:
           uri: lb://ANNOUNCEMENT-SERVICE
           predicates:
             - Path=/api/v1/announcement/**
+
+        - id: schedule-service
+          uri: lb://SCHEDULE-SERVICE
+          predicates:
+            - Path=/api/v1/time-blocks/**
+
+        - id: schedule-service
+          uri: lb://SCHEDULE-SERVICE
+          predicates:
+            - Path=/api/v1/class-schedules/**
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notification/**
 
 # Configuración de Cliente Eureka
 eureka:

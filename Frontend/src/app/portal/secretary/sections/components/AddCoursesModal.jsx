@@ -5,7 +5,7 @@ import { X, Search, Check, BookOpen, AlertCircle } from 'lucide-react';
 import { apiFetch } from '@/config/api';
 import { useToast } from '@/context/ToastContext';
 
-export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess }) {
+export default function AddCoursesModal({ isOpen, onClose, sectionId, educationLevel, gradeLevel, onSuccess }) {
   const { showToast } = useToast();
 
   const [courses, setCourses] = useState([]);
@@ -20,21 +20,20 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess 
       const loadCourses = async () => {
         setLoading(true);
         try {
-          // 1. Cargar todos los cursos disponibles en el sistema
-          const allCourses = await apiFetch('/api/v1/courses');
-          
-          // 2. Cargar los cursos ya asignados (BD)
-          const assigned = await apiFetch(`/api/v1/assigned-classes/section/${sectionId}`).catch(() => []);
-          const dbCourseIds = assigned.map(a => a.courseId);
+         
+          let allCourses = [];
+          if (educationLevel && gradeLevel) {
+            const levelUpper = educationLevel.toUpperCase();
+            allCourses = await apiFetch(`/api/v1/courses/filter/education-level-and-grade?educationLevel=${levelUpper}&gradeLevel=${gradeLevel}`);
+          } else {
+            allCourses = await apiFetch('/api/v1/courses');
+          }
 
-          // 3. Cargar los cursos asignados localmente (localStorage)
-          const localDataStr = localStorage.getItem('local_assigned_classes');
-          const localClasses = localDataStr ? JSON.parse(localDataStr) : [];
-          const localCourseIds = localClasses.filter(c => String(c.sectionId) === String(sectionId)).map(c => c.courseId);
 
-          const assignedCourseIds = new Set([...dbCourseIds, ...localCourseIds]);
+          const allAssigned = await apiFetch('/api/v1/assigned-classes').catch(() => []);
+          const sectionAssigned = allAssigned.filter(a => a.annualSections?.id === sectionId);
+          const assignedCourseIds = new Set(sectionAssigned.map(a => a.courseId));
 
-          // 4. Filtrar los que no están asignados en este salón
           const unassigned = allCourses.filter(c => !assignedCourseIds.has(c.id));
           setCourses(unassigned);
           setSelectedIds([]);
@@ -46,7 +45,7 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess 
       };
       loadCourses();
     }
-  }, [isOpen, sectionId]);
+  }, [isOpen, sectionId, educationLevel, gradeLevel]);
 
   if (!isOpen) return null;
 
@@ -64,17 +63,14 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess 
 
     setSubmitting(true);
     try {
-      // Intentar guardar en base de datos. Si falla, fallback a localStorage.
-      const localDataStr = localStorage.getItem('local_assigned_classes');
-      const localClasses = localDataStr ? JSON.parse(localDataStr) : [];
-
+   
       await Promise.all(
         selectedIds.map(async (courseId) => {
           const payload = {
-            annualSection: {
-              id: parseInt(sectionId)
+            annualSections: {
+              id: sectionId 
             },
-            courseId: parseInt(courseId),
+            courseId: courseId, 
             teacherId: null
           };
           
@@ -159,16 +155,14 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess 
               <div
                 key={course.id}
                 onClick={() => toggleSelect(course.id)}
-                className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                  isSelected
+                className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${isSelected
                     ? 'bg-indigo-50/50 border-indigo-200'
                     : 'bg-white border-gray-100 hover:border-gray-200'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs select-none ${
-                    isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-gray-400'
-                  }`}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs select-none ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-gray-400'
+                    }`}>
                     {course.name.charAt(0)}
                   </div>
                   <div>
@@ -177,9 +171,8 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, onSuccess 
                   </div>
                 </div>
 
-                <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
-                  isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 bg-white'
-                }`}>
+                <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 bg-white'
+                  }`}>
                   {isSelected && <Check className="w-3.5 h-3.5" />}
                 </div>
               </div>

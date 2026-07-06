@@ -28,10 +28,10 @@ public class Course {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "education_level", nullable = false, length = 20)
-    @NotBlank(message = "El nivel educativo es obligatorio")
-    @Pattern(regexp = "primaria|secundaria", message = "El nivel debe ser 'primaria' o 'secundaria'")
-    private String educationLevel;
+    @NotNull(message = "El nivel educativo es obligatorio")
+    private EducationLevel educationLevel;
 
     @Column(name = "grade_level", nullable = false)
     @Min(1) @Max(6)

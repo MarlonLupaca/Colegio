@@ -14,6 +14,8 @@ import SectionStudentsTab from './components/SectionStudentsTab';
 import SectionScheduleTab from './components/SectionScheduleTab';
 import NewSectionModal from './components/NewSectionModal';
 
+const SECTIONS_ENDPOINT = '/api/v1/annual-sections';
+
 export default function SectionsPage() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -26,36 +28,55 @@ export default function SectionsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Agrupar lista plana en estructura jerárquica por Nivel
-  const buildGroupedTree = (flatList) => {
+  // ── Datos para el modal de nueva sección
+  const [teachers, setTeachers] = useState([]);
+  const [classrooms, setClassrooms] = useState([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
+  const [loadingClassrooms, setLoadingClassrooms] = useState(false);
+
+  
+  const buildGroupedTree = (flatList, teachersList = []) => {
     const tree = { primaria: {}, secundaria: {} };
     flatList.forEach((s) => {
-      const level = s.educationLevel.toLowerCase();
+      const level = s.educationLevel?.toLowerCase(); 
       if (!tree[level]) tree[level] = {};
-      
-      const sectionKey = `${s.gradeLevel}° ${s.sectionName}`;
-      
+
+      const sectionKey = `${s.gradeLevel}° ${s.sectionLetter}`;
+
       tree[level][sectionKey] = {
         id: s.id,
         level: s.educationLevel,
         grade: s.gradeLevel,
-        section: s.sectionName,
-        maxStudents: s.maxStudents || 30,
-        status: s.isActive ? 'ACTIVE' : 'INACTIVE',
-        room: s.classroomName || 'Por asignar',
-        tutor: s.tutorName || 'Sin asignar'
+        section: s.sectionLetter,
+        academicYear: s.academicYear,
+        tutorTeacherId: s.tutorTeacherId,
+        classroomId: s.classroom?.id,
+        maxStudents: s.classroom?.maxCapacity || 30,
+        room: s.classroom
+          ? `${s.classroom.roomNumber} · ${s.classroom.building}`
+          : 'Por asignar',
+        classroomStatus: s.classroom?.status || 'DISPONIBLE',
+        classroomType: s.classroom?.type || '',
+        status: 'ACTIVE',
+        tutor: (() => {
+          if (!s.tutorTeacherId) return 'Sin asignar';
+          const found = teachersList.find(
+            (t) => String(t.id) === String(s.tutorTeacherId) || String(t.codigoUsuario) === String(s.tutorTeacherId)
+          );
+          return found ? `${found.nombres} ${found.apellidos}` : `ID: ${s.tutorTeacherId}`;
+        })(),
       };
     });
     return tree;
   };
 
-  // Cargar secciones del backend
-  const fetchSections = async () => {
+
+  const fetchSections = async (resolvedTeachers = teachers) => {
     setLoading(true);
     try {
-      const data = await apiFetch('/api/v1/sections');
+      const data = await apiFetch(SECTIONS_ENDPOINT);
       setRawSections(data || []);
-      setSectionsGrouped(buildGroupedTree(data || []));
+      setSectionsGrouped(buildGroupedTree(data || [], resolvedTeachers));
     } catch (err) {
       console.error('Error cargando secciones:', err.message);
     } finally {
@@ -64,16 +85,57 @@ export default function SectionsPage() {
   };
 
   useEffect(() => {
-    fetchSections();
+
+    const init = async () => {
+      let resolvedTeachers = [];
+      try {
+        const tData = await apiFetch('/api/user/usuarios/rol/DOCENTE');
+        resolvedTeachers = tData || [];
+        setTeachers(resolvedTeachers);
+      } catch (err) {
+        console.warn('No se pudieron cargar docentes al inicio:', err.message);
+      }
+      fetchSections(resolvedTeachers);
+    };
+    init();
   }, []);
+
+
+  const openNewSectionModal = async () => {
+    setIsModalOpen(true);
+
+    if (teachers.length === 0) {
+      setLoadingTeachers(true);
+      try {
+        const data = await apiFetch('/api/user/usuarios/rol/DOCENTE');
+        setTeachers(data || []);
+      } catch (err) {
+        showToast('No se pudieron cargar los docentes.', 'error');
+      } finally {
+        setLoadingTeachers(false);
+      }
+    }
+
+    if (classrooms.length === 0) {
+      setLoadingClassrooms(true);
+      try {
+        const data = await apiFetch('/api/v1/classrooms');
+        setClassrooms(data || []);
+      } catch (err) {
+        showToast('No se pudieron cargar las aulas.', 'error');
+      } finally {
+        setLoadingClassrooms(false);
+      }
+    }
+  };
 
   const selectedSection = rawSections.find(s => s.id === selectedSectionId)
     ? {
         id: selectedSectionId,
-        ...buildGroupedTree(rawSections.filter(s => s.id === selectedSectionId))[
-          rawSections.find(s => s.id === selectedSectionId).educationLevel.toLowerCase()
+        ...buildGroupedTree(rawSections.filter(s => s.id === selectedSectionId), teachers)[
+          rawSections.find(s => s.id === selectedSectionId).educationLevel?.toLowerCase()
         ]?.[
-          `${rawSections.find(s => s.id === selectedSectionId).gradeLevel}° ${rawSections.find(s => s.id === selectedSectionId).sectionName}`
+          `${rawSections.find(s => s.id === selectedSectionId).gradeLevel}° ${rawSections.find(s => s.id === selectedSectionId).sectionLetter}`
         ]
       }
     : null;
@@ -83,24 +145,15 @@ export default function SectionsPage() {
     setActiveTab('info');
   };
 
-  // Crear nueva sección en el backend (POST)
-  const handleNewSectionSubmit = async (newSectionData) => {
-    try {
-      const payload = {
-        academicYear: parseInt(newSectionData.year),
-        educationLevel: newSectionData.level.toLowerCase(),
-        gradeLevel: parseInt(newSectionData.grade),
-        sectionName: newSectionData.section.toUpperCase(),
-        maxStudents: parseInt(newSectionData.maxStudents || 30),
-        isActive: true
-      };
 
-      const result = await apiFetch('/api/v1/sections', {
+  const handleNewSectionSubmit = async (payload) => {
+    try {
+      const result = await apiFetch(SECTIONS_ENDPOINT, {
         method: 'POST',
         body: JSON.stringify(payload)
       });
 
-      showToast(`Sección ${result.gradeLevel}° ${result.sectionName} creada con éxito.`);
+      showToast(`Sección ${result.gradeLevel}° ${result.sectionLetter} creada con éxito.`);
       fetchSections();
       setIsModalOpen(false);
     } catch (err) {
@@ -108,7 +161,6 @@ export default function SectionsPage() {
     }
   };
 
-  // Actualizar sección existente (PUT con confirmación)
   const handleUpdateSection = async (id, updatedUIData) => {
     const isConfirmed = await askConfirmation({
       title: 'Actualizar Salón / Sección',
@@ -121,20 +173,29 @@ export default function SectionsPage() {
 
     try {
       const payload = {
-        educationLevel: updatedUIData.level.toLowerCase(),
+        academicYear: parseInt(updatedUIData.academicYear),
+        tutorTeacherId: updatedUIData.tutorTeacherId ? parseInt(updatedUIData.tutorTeacherId) : null,
+        educationLevel: updatedUIData.level?.toUpperCase(),
         gradeLevel: parseInt(updatedUIData.grade),
-        sectionName: updatedUIData.section.toUpperCase(),
-        maxStudents: parseInt(updatedUIData.maxStudents),
-        isActive: updatedUIData.status === 'ACTIVE'
+        sectionLetter: updatedUIData.section?.toUpperCase(),
+        classroom: updatedUIData.classroomId ? { id: updatedUIData.classroomId } : null
       };
 
-      await apiFetch(`/api/v1/sections/${id}`, {
+      await apiFetch(`${SECTIONS_ENDPOINT}/${id}`, {
         method: 'PUT',
         body: JSON.stringify(payload)
       });
 
       showToast('Sección actualizada correctamente.', 'success');
-      fetchSections();
+      let resolvedTeachers = teachers;
+      try {
+        const tData = await apiFetch('/api/user/usuarios/rol/DOCENTE');
+        resolvedTeachers = tData || [];
+        setTeachers(resolvedTeachers);
+      } catch (err) {
+        console.warn('No se pudieron recargar docentes:', err.message);
+      }
+      fetchSections(resolvedTeachers);
     } catch (err) {
       showToast(err.message || 'Error al actualizar sección.', 'error');
     }
@@ -205,7 +266,7 @@ export default function SectionsPage() {
               sections={sectionsGrouped}
               selectedSectionId={selectedSectionId}
               onSelectSection={handleSelectSection}
-              onNewSection={() => setIsModalOpen(true)}
+              onNewSection={openNewSectionModal}
             />
           )}
         </div>
@@ -245,7 +306,10 @@ export default function SectionsPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleNewSectionSubmit}
-          existingSections={sectionsGrouped}
+          teachers={teachers}
+          classrooms={classrooms}
+          loadingTeachers={loadingTeachers}
+          loadingClassrooms={loadingClassrooms}
         />
       )}
     </div>

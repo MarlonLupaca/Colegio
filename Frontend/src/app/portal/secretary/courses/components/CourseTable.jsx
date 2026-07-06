@@ -96,11 +96,12 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
               {/* Level + Grade */}
               <td className="py-3 px-4">
                 <div className="flex items-center gap-1.5">
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${course.educationLevel === 'primaria'
-                    ? 'bg-amber-50 text-amber-700 border-amber-100'
-                    : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                    }`}>
-                    {course.educationLevel}
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                    course.educationLevel?.toUpperCase() === 'PRIMARIA'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                  }`}>
+                    {course.educationLevel?.toUpperCase() === 'PRIMARIA' ? 'Primaria' : 'Secundaria'}
                   </span>
                   <span className="text-secondary font-semibold">{course.gradeLevel}° grado</span>
                 </div>
