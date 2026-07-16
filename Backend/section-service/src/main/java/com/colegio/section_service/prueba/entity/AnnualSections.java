@@ -21,8 +21,8 @@ public class    AnnualSections {
     @Column(name = "academic_year", nullable = false)
     private Integer academicYear;  // Ej: 2026, 2027
 
-    @Column(name = "tutor_teacher_id")
-    private Long tutorTeacherId;
+    @Column(name = "tutor_code", length = 20)
+    private String tutorCode;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "educationLevel", nullable = false)
@@ -39,5 +39,8 @@ public class    AnnualSections {
     @ManyToOne
     @JoinColumn(name = "classroom_id", nullable = false)
     private Classroom classroom;  // FK to Classroom entity
+
+    @Column(name = "max_weekly_hours", nullable = true)
+    private Integer maxWeeklyHours = 30;
 
 }

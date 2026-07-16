@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
+import { apiFetch } from '@/config/api';
 import { academicAreas } from '../data';
 
 const getAreaLabel = (areaValue) => {
@@ -26,6 +27,22 @@ function ActiveSwitch({ isActive, onToggle, title }) {
 }
 
 export default function CourseTable({ courses, onEdit, onDelete, onToggleActive }) {
+  const [allUsers, setAllUsers] = React.useState([]);
+
+  React.useEffect(() => {
+    apiFetch('/api/user/usuarios')
+      .then((users) => {
+        setAllUsers(users || []);
+      })
+      .catch(() => {});
+  }, [courses]);
+
+  const getTeacherForCourse = (teacherCode) => {
+    if (!teacherCode) return 'Sin docente asignado';
+    const user = allUsers.find(u => u.codigoUsuario === teacherCode);
+    return user ? `${user.nombres} ${user.apellidos}` : teacherCode;
+  };
+
   return (
     <div className="hidden md:block overflow-x-auto">
       <table className="w-full text-left border-collapse">
@@ -35,6 +52,7 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive 
             <th className="py-3.5 px-4">Nombre del Curso</th>
             <th className="py-3.5 px-4">Área Académica</th>
             <th className="py-3.5 px-4">Nivel / Grado</th>
+            <th className="py-3.5 px-4">Docente</th>
             <th className="py-3.5 px-4 text-center">Horas Sem.</th>
             <th className="py-3.5 px-4 text-center">Estado</th>
             <th className="py-3.5 px-5 text-right">Acciones</th>
@@ -75,6 +93,14 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive 
                     {course.educationLevel}
                   </span>
                   <span className="text-secondary font-semibold">{course.gradeLevel}° grado</span>
+                </div>
+              </td>
+
+              {/* Teacher */}
+              <td className="py-3 px-4 text-secondary font-semibold">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                  <span>{getTeacherForCourse(course.teacherCode)}</span>
                 </div>
               </td>
 

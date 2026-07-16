@@ -45,7 +45,7 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, educationL
       };
       loadCourses();
     }
-  }, [isOpen, sectionId, educationLevel, gradeLevel]);
+  }, [isOpen, sectionId, educationLevel, gradeLevel, showToast]);
 
   if (!isOpen) return null;
 
@@ -63,22 +63,13 @@ export default function AddCoursesModal({ isOpen, onClose, sectionId, educationL
 
     setSubmitting(true);
     try {
-      await Promise.all(
-        selectedIds.map(async (courseId) => {
-          const payload = {
-            annualSections: {
-              id: sectionId 
-            },
-            courseId: courseId, 
-            teacherId: null
-          };
-          
-          await apiFetch('/api/v1/assigned-classes', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
-        })
-      );
+      await apiFetch(`/api/v1/assigned-classes/section/${sectionId}/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(selectedIds)
+      });
 
       showToast(`¡Se asignaron exitosamente ${selectedIds.length} cursos al salón!`, 'success');
       if (onSuccess) onSuccess();

@@ -10,6 +10,7 @@ import {
   DoorOpen,
   ChevronDown,
   Loader2,
+  Clock,
 } from 'lucide-react';
 import { sectionLetters } from '../data';
 
@@ -53,8 +54,9 @@ const EMPTY_FORM = {
   educationLevel: 'PRIMARIA',
   gradeLevel: 1,
   sectionLetter: 'A',
-  tutorTeacherId: '',
+  tutorCode: '',
   classroomId: '',
+  maxWeeklyHours: 30,
 };
 
 // ── Subcomponente: Select estilizado con ícono ───────────────────────────────
@@ -144,6 +146,7 @@ export default function NewSectionModal({
   isOpen,
   onClose,
   onSubmit,
+  editSection = null,
   // Listas para los selects — se llenarán con endpoints más adelante
   teachers = [],   // [{ id, firstName, lastName, speciality?, ... }]
   classrooms = [], // [{ id, name, building?, capacity?, ... }]
@@ -155,10 +158,22 @@ export default function NewSectionModal({
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(EMPTY_FORM);
+      if (editSection) {
+        setFormData({
+          academicYear: editSection.academicYear,
+          educationLevel: editSection.level || editSection.educationLevel || 'PRIMARIA',
+          gradeLevel: editSection.grade || editSection.gradeLevel || 1,
+          sectionLetter: editSection.section || editSection.sectionLetter || 'A',
+          tutorCode: editSection.tutorCode || '',
+          classroomId: editSection.classroomId || '',
+          maxWeeklyHours: editSection.maxWeeklyHours || 30,
+        });
+      } else {
+        setFormData(EMPTY_FORM);
+      }
       setErrors({});
     }
-  }, [isOpen]);
+  }, [isOpen, editSection]);
 
   if (!isOpen) return null;
 
@@ -185,7 +200,7 @@ export default function NewSectionModal({
     if (!formData.educationLevel) e.educationLevel = 'El nivel es obligatorio';
     if (!formData.gradeLevel) e.gradeLevel = 'El grado es obligatorio';
     if (!formData.sectionLetter) e.sectionLetter = 'La sección es obligatoria';
-    if (!formData.tutorTeacherId) e.tutorTeacherId = 'Debes asignar un profesor tutor';
+    if (!formData.tutorCode) e.tutorCode = 'Debes asignar un profesor tutor';
     if (!formData.classroomId) e.classroomId = 'Debes asignar un aula';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -198,11 +213,12 @@ export default function NewSectionModal({
     // Payload exacto que espera el backend
     const payload = {
       academicYear: parseInt(formData.academicYear),
-      tutorTeacherId: parseInt(formData.tutorTeacherId),
+      tutorCode: formData.tutorCode,
       educationLevel: formData.educationLevel,
       gradeLevel: parseInt(formData.gradeLevel),
       sectionLetter: formData.sectionLetter,
       classroom: { id: formData.classroomId },
+      maxWeeklyHours: parseInt(formData.maxWeeklyHours || 30),
     };
 
     onSubmit(payload);
@@ -218,7 +234,7 @@ export default function NewSectionModal({
         <div className="bg-[#031553] text-white px-6 py-4 flex items-center justify-between">
           <h3 className="font-bold text-sm flex items-center gap-2">
             <GraduationCap className="w-4 h-4 text-white/70" />
-            Registrar Nueva Sección
+            {editSection ? 'Editar Sección / Aula' : 'Registrar Nueva Sección'}
           </h3>
           <button
             onClick={onClose}
@@ -302,16 +318,16 @@ export default function NewSectionModal({
               <RichSelect
                 label="Profesor Tutor"
                 icon={User}
-                name="tutorTeacherId"
-                value={formData.tutorTeacherId}
+                name="tutorCode"
+                value={formData.tutorCode}
                 onChange={handleChange}
                 options={teachers}
                 placeholder="— Selecciona un profesor —"
                 loading={loadingTeachers}
-                error={errors.tutorTeacherId}
+                error={errors.tutorCode}
                 required
-                // Los docentes usan t.id como identificador para tutorTeacherId
-                getOptionId={(t) => t.id}
+                // Los docentes usan su codigoUsuario para tutorCode
+                getOptionId={(t) => t.codigoUsuario}
                 renderOption={(t) =>
                   `${t.nombres ?? ''} ${t.apellidos ?? ''}${t.especialidad ? ` · ${t.especialidad}` : ''}`
                 }
@@ -351,6 +367,23 @@ export default function NewSectionModal({
                   </span>
                 )}
               />
+              {/* ── Límite de Horas Semanales ── */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-secondary uppercase tracking-wide flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-primary/50" />
+                  Límite de Horas Semanales
+                </label>
+                <input
+                  type="number"
+                  name="maxWeeklyHours"
+                  min="1"
+                  max="60"
+                  value={formData.maxWeeklyHours}
+                  onChange={handleChange}
+                  className="w-full bg-slate-50 border border-gray-200 focus:border-primary/40 focus:ring-1 focus:ring-primary/20 rounded-xl px-3 py-2.5 text-xs text-primary outline-none transition-all"
+                  required
+                />
+              </div>
             </div>
           </div>
 
@@ -367,7 +400,7 @@ export default function NewSectionModal({
               type="submit"
               className="bg-[#031553] hover:bg-[#020d36] text-white font-bold px-5 py-2 rounded-xl shadow flex items-center gap-1.5 transition-all cursor-pointer text-xs"
             >
-              <Check className="w-3.5 h-3.5" /> Crear Sección
+              <Check className="w-3.5 h-3.5" /> {editSection ? 'Guardar Cambios' : 'Crear Sección'}
             </button>
           </div>
         </form>

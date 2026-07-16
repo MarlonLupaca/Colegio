@@ -114,7 +114,7 @@ export const academicAreas = [
   { value: "ingles", label: "Inglés" },
   { value: "educacion_fisica", label: "Educación Física" },
   { value: "arte_cultura", label: "Arte y Cultura" },
-  { value: "ingles", label: "Ingles" },
   { value: "educacion_religiosa", label: "Educación Religiosa" },
   { value: "educacion_trabajo", label: "Educación trabajo" },
 ];
+

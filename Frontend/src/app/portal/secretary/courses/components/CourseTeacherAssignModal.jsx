@@ -9,89 +9,41 @@ export default function CourseTeacherAssignModal({ isOpen, onClose, course, onSu
   const { showToast } = useToast();
   
   const [teachers, setTeachers] = useState([]);
-  const [assignedClasses, setAssignedClasses] = useState([]);
-  const [sections, setSections] = useState([]);
-
-  const [selectedClassId, setSelectedClassId] = useState('');
-  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [selectedTeacherCode, setSelectedTeacherCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Cargar datos
+  // Cargar docentes activos al abrir
   useEffect(() => {
     if (isOpen && course) {
       const loadData = async () => {
         setLoading(true);
         try {
-          // 1. Cargar docentes activos
           const allUsers = await apiFetch('/api/user/usuarios').catch(() => []);
           const allTeachers = allUsers.filter(u => u.rol === 'DOCENTE' && u.activo);
           setTeachers(allTeachers);
-
-          // 2. Cargar todas las secciones para cruzar nombres
-          const allSections = await apiFetch('/api/v1/annual-sections').catch(() => []);
-          setSections(allSections);
-
-          // 3. Cargar las clases asignadas en el backend que pertenecen a este curso
-          const allAssigned = await apiFetch('/api/v1/assigned-classes').catch(() => []);
-          const courseAssignments = allAssigned.filter(a => String(a.courseId) === String(course.id));
-          setAssignedClasses(courseAssignments);
-
-          // Limpiar selecciones
-          setSelectedClassId('');
-          setSelectedTeacherId('');
+          setSelectedTeacherCode(course.teacherCode || '');
         } catch (err) {
-          showToast('No se pudieron cargar los datos de asignación.', 'error');
+          showToast('No se pudieron cargar los docentes activos.', 'error');
         } finally {
           setLoading(false);
         }
       };
       loadData();
     }
-  }, [isOpen, course]);
-
-  // Al cambiar la clase/sección seleccionada, pre-cargar el docente correspondiente
-  useEffect(() => {
-    if (selectedClassId) {
-      const match = assignedClasses.find(c => String(c.id) === String(selectedClassId));
-      setSelectedTeacherId(match && match.teacherId ? String(match.teacherId) : '');
-    } else {
-      setSelectedTeacherId('');
-    }
-  }, [selectedClassId, assignedClasses]);
+  }, [isOpen, course, showToast]);
 
   if (!isOpen || !course) return null;
 
   const handleSubmit = async () => {
-    if (!selectedClassId) {
-      showToast('Selecciona la sección o salón a la cual le asignarás el docente.', 'error');
-      return;
-    }
-    if (!selectedTeacherId) {
-      showToast('Selecciona un docente responsable.', 'error');
-      return;
-    }
-
-    const targetClass = assignedClasses.find(c => String(c.id) === String(selectedClassId));
-    if (!targetClass) return;
-
     setSubmitting(true);
     try {
-      const payload = {
-        id: targetClass.id,
-        annualSections: targetClass.annualSections,
-        classroomOverrideId: targetClass.classroomOverrideId,
-        courseId: targetClass.courseId,
-        teacherId: parseInt(selectedTeacherId)
-      };
-
-      // Actualizar la asignación del docente al curso de esta sección en el backend
-      await apiFetch(`/api/v1/assigned-classes/${targetClass.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
+      // Endpoint simplificado de asignación directa
+      await apiFetch(`/api/v1/courses/${course.id}/assign-teacher?teacherCode=${selectedTeacherCode}`, {
+        method: 'PUT'
       });
 
-      showToast(`¡Docente asignado al curso "${course.name}" exitosamente para el salón seleccionado!`, 'success');
+      showToast(`¡Docente asignado al curso "${course.name}" exitosamente!`, 'success');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -101,23 +53,14 @@ export default function CourseTeacherAssignModal({ isOpen, onClose, course, onSu
     }
   };
 
-  // Helper para resolver el nombre visible de la sección
-  const getSectionLabel = (classItem) => {
-    const secId = classItem.annualSections?.id;
-    const secInfo = sections.find(s => s.id === secId);
-    if (!secInfo) return `Sección ID: ${secId || 'N/A'}`;
-    const letter = secInfo.sectionLetter || secInfo.sectionName || '';
-    return `${secInfo.gradeLevel}° "${letter.toUpperCase()}" (${secInfo.educationLevel})`;
-  };
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100/50 flex flex-col text-xs text-[#031553] text-left">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-gray-100/50 flex flex-col text-xs text-[#031553] text-left animate-slide-up">
         
         {/* Header */}
-        <div className="bg-[#031553] text-white p-5 flex justify-between items-center shrink-0">
+        <div className="bg-primary text-white p-5 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-sm flex items-center gap-1.5">
-            <UserCheck className="w-4 h-4" /> Vincular Docente al Curso
+            <UserCheck className="w-4 h-4 text-white/80" /> Vincular Docente al Curso
           </h3>
           <button onClick={onClose} className="text-white/70 hover:text-white bg-white/10 p-1.5 rounded-full cursor-pointer transition-colors">
             <X className="w-4 h-4" />
@@ -125,7 +68,7 @@ export default function CourseTeacherAssignModal({ isOpen, onClose, course, onSu
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-gray-400">Cargando dependencias de asignación...</div>
+          <div className="p-12 text-center text-gray-400">Cargando docentes activos...</div>
         ) : (
           <div className="p-6 space-y-5">
             {/* Resumen del curso */}
@@ -139,45 +82,19 @@ export default function CourseTeacherAssignModal({ isOpen, onClose, course, onSu
               </p>
             </div>
 
-            {/* Selector de Aula/Sección asociada */}
-            <div className="space-y-1.5">
-              <label className="font-bold text-gray-400 uppercase tracking-wider text-[9px] block">
-                1. Selecciona el Salón/Sección
-              </label>
-              {assignedClasses.length > 0 ? (
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="w-full bg-slate-50 border border-gray-200 focus:border-indigo-400 rounded-xl py-2 px-3 text-xs text-primary font-semibold outline-none cursor-pointer"
-                >
-                  <option value="">-- Seleccionar Salón donde se dicta --</option>
-                  {assignedClasses.map((ac) => (
-                    <option key={ac.id} value={ac.id}>
-                      {getSectionLabel(ac)}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-[10px] text-amber-800">
-                  Este curso no está asignado a ninguna sección en la base de datos. Agrégalo primero a una Sección para poder asociarle un docente.
-                </div>
-              )}
-            </div>
-
             {/* Selector de Docente */}
             <div className="space-y-1.5">
               <label className="font-bold text-gray-400 uppercase tracking-wider text-[9px] block">
-                2. Selecciona el Docente a cargo
+                Selecciona el Docente a cargo del Curso
               </label>
               <select
-                value={selectedTeacherId}
-                onChange={(e) => setSelectedTeacherId(e.target.value)}
-                disabled={!selectedClassId}
-                className="w-full bg-slate-50 border border-gray-200 focus:border-indigo-400 rounded-xl py-2 px-3 text-xs text-primary font-semibold outline-none cursor-pointer disabled:opacity-50"
+                value={selectedTeacherCode}
+                onChange={(e) => setSelectedTeacherCode(e.target.value)}
+                className="w-full bg-slate-50 border border-gray-200 focus:border-indigo-400 rounded-xl py-2 px-3 text-xs text-primary font-semibold outline-none cursor-pointer"
               >
-                <option value="">-- Seleccionar Docente --</option>
+                <option value="">Sin docente asignado (Nulo)</option>
                 {teachers.map((t) => (
-                  <option key={t.id} value={t.id}>
+                  <option key={t.codigoUsuario} value={t.codigoUsuario}>
                     {t.nombres} {t.apellidos} ({t.codigoUsuario})
                   </option>
                 ))}
@@ -196,8 +113,8 @@ export default function CourseTeacherAssignModal({ isOpen, onClose, course, onSu
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting || !selectedClassId || !selectedTeacherId}
-                className="bg-[#031553] hover:bg-[#020d36] text-white font-bold px-5 py-2.5 rounded-xl shadow flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                disabled={submitting}
+                className="bg-primary hover:bg-primary-hover text-white font-bold px-5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
               >
                 <Check className="w-3.5 h-3.5" />
                 {submitting ? 'Guardando...' : 'Asignar Docente'}

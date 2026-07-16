@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, X } from 'lucide-react';
+import { apiFetch } from '@/config/api';
 import { academicAreas } from '../data';
 
 const PRIMARIA_GRADES = [
@@ -24,6 +25,7 @@ const SECUNDARIA_GRADES = [
 const EMPTY_FORM = {
   name: '',
   code: '',
+  teacherCode: '',
   academicArea: '',
   description: '',
   educationLevel: 'primaria',
@@ -35,10 +37,27 @@ const EMPTY_FORM = {
 const inputBase = 'w-full bg-slate-50 border rounded-xl py-2 px-3 text-xs text-primary outline-none transition-all';
 
 export default function CourseModal({ isOpen, onClose, onSubmit, formType, currentCourse, courses }) {
+  const [teachers, setTeachers] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Cargar docentes activos
+      apiFetch('/api/user/usuarios')
+        .then((users) => {
+          const activeTeachers = (users || []).filter(
+            (u) => u.rol === 'DOCENTE' && u.activo
+          );
+          setTeachers(activeTeachers);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
   const initialData = formType === 'edit' && currentCourse
     ? {
       name: currentCourse.name,
       code: currentCourse.code,
+      teacherCode: currentCourse.teacherCode || '',
       academicArea: currentCourse.academicArea,
       description: currentCourse.description || '',
       educationLevel: currentCourse.educationLevel,
@@ -70,17 +89,6 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
   const validate = () => {
     const e = {};
     if (!formData.name.trim()) e.name = 'El nombre es obligatorio';
-    if (!formData.code.trim()) {
-      e.code = 'El código es obligatorio';
-    } else if (
-      courses.some(
-        (c) =>
-          c.code.toUpperCase() === formData.code.trim().toUpperCase() &&
-          c.id !== currentCourse?.id
-      )
-    ) {
-      e.code = 'Este código ya existe en otro curso';
-    }
     if (!formData.academicArea) e.academicArea = 'El área académica es obligatoria';
     if (!formData.hoursPerWeek || parseInt(formData.hoursPerWeek) <= 0)
       e.hoursPerWeek = 'Las horas semanales deben ser mayor a 0';
@@ -134,22 +142,22 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
               {errors.name && <p className="text-[10px] text-rose-600 font-bold">{errors.name}</p>}
             </div>
 
-            {/* Code */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Código *</label>
-              <input
-                type="text"
-                name="code"
-                value={formData.code}
-                onChange={handleChange}
-                placeholder="Ej. MAT-002"
-                className={`${inputBase} uppercase ${errors.code ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200 focus:border-primary/40'}`}
-              />
-              {errors.code && <p className="text-[10px] text-rose-600 font-bold">{errors.code}</p>}
-            </div>
+            {/* Code (Only visible in edit mode) */}
+            {formType === 'edit' && (
+              <div className="space-y-1 col-span-2">
+                <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Código</label>
+                <input
+                  type="text"
+                  name="code"
+                  value={formData.code}
+                  disabled
+                  className={`${inputBase} uppercase bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none`}
+                />
+              </div>
+            )}
 
             {/* Hours */}
-            <div className="space-y-1">
+            <div className="space-y-1 col-span-2">
               <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Horas Semanales *</label>
               <input
                 type="number"
@@ -178,6 +186,24 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
                 ))}
               </select>
               {errors.academicArea && <p className="text-[10px] text-rose-600 font-bold">{errors.academicArea}</p>}
+            </div>
+
+            {/* Docente / Profesora */}
+            <div className="space-y-1 col-span-2">
+              <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Docente Responsable</label>
+              <select
+                name="teacherCode"
+                value={formData.teacherCode}
+                onChange={handleChange}
+                className={`${inputBase} cursor-pointer border-gray-200 focus:border-primary/40`}
+              >
+                <option value="">Sin docente asignado (Nulo)</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher.codigoUsuario} value={teacher.codigoUsuario}>
+                    {teacher.nombres} {teacher.apellidos} ({teacher.codigoUsuario})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Education Level */}

@@ -47,29 +47,44 @@ const mockNotifications = [
 
 export default function Header({ welcomeText, userName: propUserName, userCode: propUserCode, avatarText: propAvatarText, searchPlaceholder = 'Buscar...' }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [userName, setUserName] = useState(propUserName || 'Usuario');
-  const [userCode, setUserCode] = useState(propUserCode || '');
-  const [avatarText, setAvatarText] = useState(propAvatarText || 'US');
+  const [userName, setUserName] = useState(() => propUserName || (typeof window !== 'undefined' ? cookies.get('userName') : 'Usuario') || 'Usuario');
+  const [userCode, setUserCode] = useState(() => propUserCode || (typeof window !== 'undefined' ? cookies.get('userCode') : '') || '');
+  const [avatarText, setAvatarText] = useState(() => {
+    if (propAvatarText) return propAvatarText;
+    const name = propUserName || (typeof window !== 'undefined' ? cookies.get('userName') : '');
+    if (name) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+      } else if (parts[0]) {
+        return parts[0].substring(0, 2).toUpperCase();
+      }
+    }
+    return 'US';
+  });
 
-  useEffect(() => {
-    const nameCookie = cookies.get('userName');
-    const codeCookie = cookies.get('userCode');
+  const [prevPropUserName, setPrevPropUserName] = useState(propUserName);
+  const [prevPropUserCode, setPrevPropUserCode] = useState(propUserCode);
 
-    if (nameCookie) {
-      setUserName(nameCookie);
-      
-      // Extraer iniciales para el avatar
-      const parts = nameCookie.trim().split(/\s+/);
+  if (propUserName !== prevPropUserName) {
+    setPrevPropUserName(propUserName);
+    if (propUserName) {
+      setUserName(propUserName);
+      const parts = propUserName.trim().split(/\s+/);
       if (parts.length >= 2) {
         setAvatarText((parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase());
       } else if (parts[0]) {
         setAvatarText(parts[0].substring(0, 2).toUpperCase());
       }
     }
-    if (codeCookie) {
-      setUserCode(codeCookie);
+  }
+
+  if (propUserCode !== prevPropUserCode) {
+    setPrevPropUserCode(propUserCode);
+    if (propUserCode) {
+      setUserCode(propUserCode);
     }
-  }, [propUserName, propUserCode]);
+  }
 
   return (
     <header className="flex justify-between items-center mb-4  py-4 border-b border-gray-300 shrink-0 sticky top-0 bg-white z-20 px-4">

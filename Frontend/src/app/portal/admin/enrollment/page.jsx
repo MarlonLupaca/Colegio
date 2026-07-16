@@ -171,7 +171,7 @@ export default function EnrollmentPage() {
                     <p><strong>Grado Solicitado:</strong> <span className="text-[#031553] font-semibold">{adm.requestedGrade}</span></p>
                     <p><strong>Apoderado:</strong> {adm.guardianName} ({adm.guardianPhone})</p>
                   </div>
-                  <p className="text-[11px] text-gray-400 bg-gray-50 p-2 rounded-xl italic">"{adm.observations}"</p>
+                  <p className="text-[11px] text-gray-400 bg-gray-50 p-2 rounded-xl italic">&quot;{adm.observations}&quot;</p>
                 </div>
 
                 {adm.status === 'PENDING' && (

@@ -421,7 +421,7 @@ export default function SectionScheduleTab({ section }) {
           <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <h4 className="text-sm font-bold text-secondary">Sin horario asignado</h4>
           <p className="text-xs text-secondary/60 mt-1">
-            Haz clic en "Agregar Bloque" para crear el horario de esta sección
+            Haz clic en &quot;Agregar Bloque&quot; para crear el horario de esta sección
           </p>
         </div>
       )}

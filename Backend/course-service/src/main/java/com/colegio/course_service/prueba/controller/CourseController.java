@@ -79,4 +79,9 @@ public class CourseController {
     public List<Course> getCoursesByTeacher(@PathVariable String teacherCodeOrId) {
         return courseService.getCoursesByTeacher(teacherCodeOrId);
     }
+
+    @PutMapping("/{id}/assign-teacher")
+    public Course assignTeacher(@PathVariable UUID id, @RequestParam(required = false) String teacherCode) {
+        return courseService.assignTeacher(id, teacherCode);
+    }
 }

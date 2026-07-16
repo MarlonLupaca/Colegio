@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, 
   Search, 
@@ -18,38 +18,29 @@ export default function SectionStudentsTab({ section }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Cargar estudiantes oficiales matriculados en esta sección
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     if (!section?.id) return;
     setLoading(true);
     try {
-      // 1. Buscar sección
-      const academicYear = section.academicYear || 2026;
-      const educationLevel = (section.level || '').toUpperCase();
-      const gradeLevel = section.grade || 1;
-      const sectionLetter = (section.section || '').toUpperCase();
+      const sectionId = section.id;
 
-      const sectionSearch = await apiFetch(
-        `/api/v1/annual-sections/search?academicYear=${academicYear}&educationLevel=${educationLevel}&gradeLevel=${gradeLevel}&sectionLetter=${sectionLetter}`
-      );
-      const sectionId = sectionSearch?.id || section.id;
-
-      // 2. Obtener inscripciones de la sección
-      const enrollments = await apiFetch(`/api/enrollment/enrollments/section/${sectionId}`);
+      // 1. Obtener los alumnos asignados a la sección directamente del microservicio de secciones
+      const sectionStudents = await apiFetch(`/api/v1/annual-sections/${sectionId}/students`).catch(() => []);
       
-      // 3. Obtener todos los alumnos registrados
-      const filteredStudents = await apiFetch('/api/user/usuarios/rol/ALUMNO');
+      // 2. Obtener todos los alumnos registrados para cruzar datos
+      const filteredStudents = await apiFetch('/api/user/usuarios/rol/ALUMNO').catch(() => []);
 
-      // 4. Cruzar datos
-      const studentsInSection = enrollments.map(en => {
-        const studentInfo = (filteredStudents || []).find(st => st.id === en.studentId);
+      // 3. Cruzar datos
+      const studentsInSection = sectionStudents.map(ss => {
+        const studentInfo = (filteredStudents || []).find(st => st.codigoUsuario === ss.studentCode);
         return {
-          id: en.id,
-          studentId: en.studentId,
-          name: studentInfo ? `${studentInfo.nombres} ${studentInfo.apellidos}` : `Estudiante (ID: ${en.studentId})`,
-          code: studentInfo ? studentInfo.codigoUsuario : 'ALXXXXXX',
+          id: ss.id,
+          studentId: studentInfo ? studentInfo.id : null,
+          name: studentInfo ? `${studentInfo.nombres} ${studentInfo.apellidos}` : `Estudiante (${ss.studentCode})`,
+          code: ss.studentCode,
           email: studentInfo?.email || 'No registrado',
           phone: studentInfo?.telefono || 'No registrado',
-          status: en.status === 'CONFIRMADA' ? 'ACTIVO' : 'INACTIVO'
+          status: studentInfo?.activo ? 'ACTIVO' : 'INACTIVO'
         };
       });
 
@@ -59,11 +50,14 @@ export default function SectionStudentsTab({ section }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [section]);
 
   useEffect(() => {
-    fetchStudents();
-  }, [section]);
+    const timer = setTimeout(() => {
+      fetchStudents();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [section, fetchStudents]);
 
   const filteredStudents = students.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

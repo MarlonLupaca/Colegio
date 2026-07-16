@@ -9,7 +9,7 @@ export default function AddStudentsModal({ isOpen, onClose, sectionId, onSuccess
   const { showToast } = useToast();
   
   const [students, setStudents] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedCodes, setSelectedCodes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -24,14 +24,14 @@ export default function AddStudentsModal({ isOpen, onClose, sectionId, onSuccess
           const allStudents = await apiFetch('/api/user/usuarios/rol/ALUMNO');
           const activeStudents = (allStudents || []).filter(u => u.activo);
 
-          // 2. Cargar todas las matrículas existentes para filtrar los ya matriculados
-          const enrollments = await apiFetch('/api/enrollment/enrollments');
-          const enrolledStudentIds = new Set(enrollments.map(e => e.studentId));
+          // 2. Cargar todos los alumnos asignados a secciones para filtrar
+          const assigned = await apiFetch('/api/v1/annual-sections/students').catch(() => []);
+          const assignedCodes = new Set(assigned.map(a => a.studentCode));
 
           // 3. Filtrar alumnos que aún no tienen sección asignada
-          const unassigned = activeStudents.filter(s => !enrolledStudentIds.has(s.id));
+          const unassigned = activeStudents.filter(s => !assignedCodes.has(s.codigoUsuario));
           setStudents(unassigned);
-          setSelectedIds([]);
+          setSelectedCodes([]);
         } catch (err) {
           showToast('No se pudo cargar la lista de alumnos.', 'error');
         } finally {
@@ -40,57 +40,46 @@ export default function AddStudentsModal({ isOpen, onClose, sectionId, onSuccess
       };
       loadStudents();
     }
-  }, [isOpen]);
+  }, [isOpen, showToast]);
 
   if (!isOpen) return null;
 
-  const toggleSelect = (id) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+  const toggleSelect = (code) => {
+    setSelectedCodes(prev =>
+      prev.includes(code) ? prev.filter(item => item !== code) : [...prev, code]
     );
   };
 
   const handleSelectAll = () => {
-    if (selectedIds.length === filteredStudents.length) {
-      setSelectedIds([]);
+    if (selectedCodes.length === filteredStudents.length) {
+      setSelectedCodes([]);
     } else {
-      setSelectedIds(filteredStudents.map(s => s.id));
+      setSelectedCodes(filteredStudents.map(s => s.codigoUsuario));
     }
   };
 
   const handleRegister = async () => {
-    if (selectedIds.length === 0) {
-      showToast('Selecciona al menos un alumno para matricular.', 'error');
+    if (selectedCodes.length === 0) {
+      showToast('Selecciona al menos un alumno para inscribir.', 'error');
       return;
     }
 
     setSubmitting(true);
     try {
-      const currentYear = new Date().getFullYear();
-      
-      // Enviar peticiones concurrentes para matricular a cada alumno
-      await Promise.all(
-        selectedIds.map(async (studentId) => {
-          const payload = {
-            studentId: studentId,
-            sectionId: sectionId,
-            gradeLevel: 1, // Se ajusta dinámicamente en backend
-            academicYear: currentYear,
-            condition: 'REGULAR',
-            status: 'CONFIRMADA'
-          };
-          return apiFetch('/api/enrollment/enrollments', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
-        })
-      );
+      // Registrar todos los alumnos en lote
+      await apiFetch(`/api/v1/annual-sections/${sectionId}/students/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(selectedCodes)
+      });
 
-      showToast(`¡Se matricularon con éxito ${selectedIds.length} alumnos en el aula!`, 'success');
+      showToast(`¡Se inscribieron con éxito ${selectedCodes.length} alumnos en la sección!`, 'success');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      showToast(err.message || 'Error al matricular alumnos.', 'error');
+      showToast(err.message || 'Error al inscribir alumnos.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -135,10 +124,10 @@ export default function AddStudentsModal({ isOpen, onClose, sectionId, onSuccess
                 onClick={handleSelectAll}
                 className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer select-none"
               >
-                {selectedIds.length === filteredStudents.length ? 'Desmarcar todos' : 'Seleccionar todos los filtrados'}
+                {selectedCodes.length === filteredStudents.length ? 'Desmarcar todos' : 'Seleccionar todos los filtrados'}
               </button>
               <span className="text-[10px] font-semibold text-gray-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                {selectedIds.length} seleccionados
+                {selectedCodes.length} seleccionados
               </span>
             </div>
           )}
@@ -149,11 +138,11 @@ export default function AddStudentsModal({ isOpen, onClose, sectionId, onSuccess
           {loading ? (
             <p className="text-center py-12 text-gray-400">Buscando alumnos sin asignar...</p>
           ) : filteredStudents.map(student => {
-            const isSelected = selectedIds.includes(student.id);
+            const isSelected = selectedCodes.includes(student.codigoUsuario);
             return (
               <div
                 key={student.id}
-                onClick={() => toggleSelect(student.id)}
+                onClick={() => toggleSelect(student.codigoUsuario)}
                 className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                   isSelected
                     ? 'bg-indigo-50/50 border-indigo-200'
@@ -199,11 +188,11 @@ export default function AddStudentsModal({ isOpen, onClose, sectionId, onSuccess
           </button>
           <button
             onClick={handleRegister}
-            disabled={submitting || selectedIds.length === 0}
+            disabled={submitting || selectedCodes.length === 0}
             className="bg-[#031553] hover:bg-[#020d36] text-white font-bold px-5 py-2 rounded-xl shadow flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
           >
             <Check className="w-3.5 h-3.5" />
-            {submitting ? 'Inscribiendo...' : `Matricular Alumnos (${selectedIds.length})`}
+            {submitting ? 'Inscribiendo...' : `Matricular Alumnos (${selectedCodes.length})`}
           </button>
         </div>
       </div>

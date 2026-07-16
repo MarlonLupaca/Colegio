@@ -40,18 +40,47 @@ function UploadModal({ isOpen, onClose, courses, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef();
 
-  const [form, setForm] = useState({
-    titulo: '',
-    descripcion: '',
-    courseId: '',
-    weekId: '',
-    codigoDocente: '',
-    esPublico: true
+  const [form, setForm] = useState(() => {
+    let codigo = '';
+    if (typeof window !== 'undefined') {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      codigo = user.codigoUsuario || user.codigo || '';
+    }
+    return {
+      titulo: '',
+      descripcion: '',
+      courseId: '',
+      weekId: '',
+      codigoDocente: codigo,
+      esPublico: true
+    };
   });
+  // Estado de errores del formulario de materiales
+  const [uploadErrors, setUploadErrors] = useState({});
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    setForm(prev => ({ ...prev, codigoDocente: user.codigoUsuario || user.codigo || '' }));
+    if (!isOpen) {
+      setTimeout(() => {
+        setFile(null);
+        setStep(1);
+        setForm(prev => {
+          let codigo = '';
+          if (typeof window !== 'undefined') {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            codigo = user.codigoUsuario || user.codigo || '';
+          }
+          return {
+            titulo: '',
+            descripcion: '',
+            courseId: '',
+            weekId: '',
+            codigoDocente: codigo,
+            esPublico: true
+          };
+        });
+        setUploadErrors({});
+      }, 0);
+    }
   }, [isOpen]);
 
   useEffect(() => {
@@ -60,7 +89,10 @@ function UploadModal({ isOpen, onClose, courses, onSuccess }) {
         .then(setWeeks)
         .catch(() => setWeeks([]));
     } else {
-      setWeeks([]);
+      const timer = setTimeout(() => {
+        setWeeks([]);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [form.courseId]);
 
@@ -84,8 +116,22 @@ function UploadModal({ isOpen, onClose, courses, onSuccess }) {
   };
 
   const handleSubmit = async () => {
-    if (!form.titulo.trim() || !form.courseId || !form.codigoDocente) {
-      showToast('Completa todos los campos requeridos.', 'error');
+    // Validación mejorada con errores en línea
+    const errs = {};
+    if (!form.titulo.trim()) {
+      errs.titulo = 'El título del material es obligatorio';
+    } else if (form.titulo.trim().length < 3) {
+      errs.titulo = 'El título debe tener al menos 3 caracteres';
+    }
+    if (!form.courseId) {
+      errs.courseId = 'Debes seleccionar un curso';
+    }
+    if (!form.codigoDocente) {
+      errs.codigoDocente = 'El código del docente es obligatorio';
+    }
+    setUploadErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      showToast('Por favor completa los campos requeridos.', 'error');
       return;
     }
     setSubmitting(true);
@@ -125,6 +171,7 @@ function UploadModal({ isOpen, onClose, courses, onSuccess }) {
     setStep(1);
     setFile(null);
     setForm({ titulo: '', descripcion: '', courseId: '', weekId: '', codigoDocente: '', esPublico: true });
+    setUploadErrors({});
     onClose();
   };
 
@@ -195,8 +242,18 @@ function UploadModal({ isOpen, onClose, courses, onSuccess }) {
 
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1">Título <span className="text-red-400">*</span></label>
-                <input className="w-full border border-gray-200 rounded-xl py-2 px-3 text-xs outline-none focus:border-[#031553]/40 focus:ring-1 focus:ring-[#031553]/20 transition-all"
-                  value={form.titulo} onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))} placeholder="Ej: Guía de Matemáticas - Semana 3" />
+                <input
+                  className={`w-full border rounded-xl py-2 px-3 text-xs outline-none focus:border-[#031553]/40 focus:ring-1 focus:ring-[#031553]/20 transition-all ${
+                    uploadErrors.titulo ? 'border-rose-400 ring-1 ring-rose-100' : 'border-gray-200'
+                  }`}
+                  value={form.titulo}
+                  onChange={e => {
+                    setForm(p => ({ ...p, titulo: e.target.value }));
+                    if (uploadErrors.titulo) setUploadErrors(prev => ({ ...prev, titulo: null }));
+                  }}
+                  placeholder="Ej: Guía de Matemáticas - Semana 3"
+                />
+                {uploadErrors.titulo && <p className="text-[10px] text-rose-600 font-bold mt-1">{uploadErrors.titulo}</p>}
               </div>
 
               <div>
@@ -208,11 +265,20 @@ function UploadModal({ isOpen, onClose, courses, onSuccess }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Curso <span className="text-red-400">*</span></label>
-                  <select className="w-full border border-gray-200 rounded-xl py-2 px-3 text-xs outline-none focus:border-[#031553]/40 bg-white cursor-pointer"
-                    value={form.courseId} onChange={e => setForm(p => ({ ...p, courseId: e.target.value, weekId: '' }))}>
+                  <select
+                    className={`w-full border rounded-xl py-2 px-3 text-xs outline-none focus:border-[#031553]/40 bg-white cursor-pointer ${
+                      uploadErrors.courseId ? 'border-rose-400 ring-1 ring-rose-100' : 'border-gray-200'
+                    }`}
+                    value={form.courseId}
+                    onChange={e => {
+                      setForm(p => ({ ...p, courseId: e.target.value, weekId: '' }));
+                      if (uploadErrors.courseId) setUploadErrors(prev => ({ ...prev, courseId: null }));
+                    }}
+                  >
                     <option value="">Seleccionar...</option>
                     {courses_.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
+                  {uploadErrors.courseId && <p className="text-[10px] text-rose-600 font-bold mt-1">{uploadErrors.courseId}</p>}
                 </div>
 
                 <div>
@@ -322,41 +388,24 @@ export default function MaterialsPage() {
   const [selectedTrimestre, setSelectedTrimestre] = useState('');
   const [selectedWeek, setSelectedWeek] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [codigoDocente, setCodigoDocente] = useState('');
-
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const codigo = user.codigoUsuario || user.codigo || '';
-    setCodigoDocente(codigo);
-    loadCourses();
-  }, []);
-
-  useEffect(() => {
-    if (codigoDocente) loadMaterials();
-  }, [codigoDocente]);
-
-  useEffect(() => {
-    if (selectedCourse) {
-      apiFetch(`/api/v1/weeks/course/${selectedCourse}`)
-        .then(setWeeks)
-        .catch(() => setWeeks([]));
-    } else {
-      setWeeks([]);
-      setSelectedWeek('');
-      setSelectedTrimestre('');
+  const [codigoDocente, setCodigoDocente] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return user.codigoUsuario || user.codigo || '';
     }
-  }, [selectedCourse]);
+    return '';
+  });
 
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     try {
       const data = await apiFetch('/api/v1/courses');
       setCourses(data);
     } catch {
       setCourses([]);
     }
-  };
+  }, []);
 
-  const loadMaterials = async () => {
+  const loadMaterials = useCallback(async () => {
     setLoading(true);
     try {
       const data = await apiFetch(`/api/v1/materials/docente/${codigoDocente}`);
@@ -366,7 +415,38 @@ export default function MaterialsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [codigoDocente]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadCourses();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadCourses]);
+
+  useEffect(() => {
+    if (codigoDocente) {
+      const timer = setTimeout(() => {
+        loadMaterials();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [codigoDocente, loadMaterials]);
+
+  useEffect(() => {
+    if (selectedCourse) {
+      apiFetch(`/api/v1/weeks/course/${selectedCourse}`)
+        .then(setWeeks)
+        .catch(() => setWeeks([]));
+    } else {
+      const timer = setTimeout(() => {
+        setWeeks([]);
+        setSelectedWeek('');
+        setSelectedTrimestre('');
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedCourse]);
 
   const handleDownload = async (material) => {
     try {
@@ -495,7 +575,7 @@ export default function MaterialsPage() {
             <FolderOpen className="w-7 h-7 text-gray-300" />
           </div>
           <p className="font-bold text-gray-500 text-sm">No hay materiales</p>
-          <p className="text-gray-300 text-xs mt-1">Sube tu primer archivo haciendo clic en "Subir Material"</p>
+          <p className="text-gray-300 text-xs mt-1">Sube tu primer archivo haciendo clic en &quot;Subir Material&quot;</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">

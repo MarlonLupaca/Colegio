@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Plus, ArrowLeft, X, ShieldCheck, GraduationCap, Clock, Calendar, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { apiFetch } from '@/config/api';
@@ -33,40 +33,57 @@ export default function AdminCoursesPage() {
   // Modal para asignación de docente
   const [assignTeacherCourse, setAssignTeacherCourse] = useState(null);
 
-  // Cargar cursos reales del backend
-  const fetchCourses = async () => {
-  setLoading(true);
-  setLoadError(null);
-  try {
-    const data = await apiFetch(COURSES_ENDPOINT);
-    setCourses(data || []);
-  } catch (err) {
-    setLoadError(err.message);
-    showToast('Error al cargar los cursos', 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchCourses = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await apiFetch(COURSES_ENDPOINT);
+      setCourses(data || []);
+    } catch (err) {
+      setLoadError(err.message);
+      showToast('Error al cargar los cursos', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
 
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    const timer = setTimeout(() => {
+      fetchCourses();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchCourses]);
 
-  // ── Filters
+  // ── Filters & Pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [levelFilter, setLevelFilter] = useState('todos');
   const [gradeFilter, setGradeFilter] = useState('todos');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, levelFilter, gradeFilter]);
 
   const resetFilters = () => {
     setSearchTerm('');
     setStatusFilter('todos');
     setLevelFilter('todos');
     setGradeFilter('todos');
+    setCurrentPage(1);
     showToast('Filtros reiniciados', 'info');
   };
 
-  const filteredCourses = courses.filter((c) => {
+  // Ordenar cursos por fecha de creación descendente (los más nuevos primero)
+  const sortedCourses = [...courses].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateB - dateA;
+  });
+
+  const filteredCourses = sortedCourses.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = statusFilter === 'todos' ||
@@ -76,6 +93,11 @@ export default function AdminCoursesPage() {
     const matchGrade = gradeFilter === 'todos' || c.gradeLevel === parseInt(gradeFilter);
     return matchSearch && matchStatus && matchLevel && matchGrade;
   });
+
+  const totalItems = filteredCourses.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCourses = filteredCourses.slice(startIndex, startIndex + itemsPerPage);
 
   // Helper para obtener label del area
   const getAreaLabel = (areaValue) => {
@@ -281,7 +303,7 @@ export default function AdminCoursesPage() {
         {filteredCourses.length > 0 ? (
           <>
             <CourseTable
-              courses={filteredCourses}
+              courses={paginatedCourses}
               onEdit={openEdit}
               onDelete={handleDelete}
               onToggleActive={handleToggleActive}
@@ -289,11 +311,80 @@ export default function AdminCoursesPage() {
               onAssignTeacher={setAssignTeacherCourse}
             />
             <CourseMobileList
-              courses={filteredCourses}
+              courses={paginatedCourses}
               onEdit={openEdit}
               onDelete={handleDelete}
               onToggleActive={handleToggleActive}
             />
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-gray-100 bg-white px-6 py-4 sm:px-6 select-none">
+                <div className="flex flex-1 justify-between sm:hidden">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="relative ml-3 inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+                <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs text-gray-700">
+                      Mostrando <span className="font-bold text-[#031553]">{startIndex + 1}</span> a{' '}
+                      <span className="font-bold text-[#031553]">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de{' '}
+                      <span className="font-bold text-[#031553]">{totalItems}</span> resultados
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="isolate inline-flex -space-x-px rounded-xl shadow-xs gap-1" aria-label="Pagination">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center rounded-lg p-2 text-gray-400 hover:bg-slate-50 border border-gray-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <span className="sr-only">Anterior</span>
+                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`relative inline-flex items-center rounded-lg px-3 py-1 text-xs font-bold border transition-colors cursor-pointer ${
+                            currentPage === page
+                              ? 'z-10 bg-[#031553] text-white border-[#031553] shadow-xs'
+                              : 'bg-white text-gray-600 border-gray-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="relative inline-flex items-center rounded-lg p-2 text-gray-400 hover:bg-slate-50 border border-gray-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <span className="sr-only">Siguiente</span>
+                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">

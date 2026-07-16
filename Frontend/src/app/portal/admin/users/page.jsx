@@ -76,6 +76,8 @@ const initialStudents = [
   },
 ];
 
+import { validateForm, isRequired, minLength, isDNI } from '@/hooks/useFormValidation';
+
 export default function UsersPage() {
   const [students, setStudents] = useState(initialStudents);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,6 +85,7 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewStudentOpen, setIsNewStudentOpen] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [errors, setErrors] = useState({});
 
   // New Student form state
   const [newStudent, setNewStudent] = useState({
@@ -110,6 +113,31 @@ export default function UsersPage() {
 
   const handleCreateStudent = (e) => {
     e.preventDefault();
+
+    const rules = {
+      firstName: [
+        { check: (v) => isRequired(v), msg: 'El nombre es obligatorio' },
+        { check: (v) => minLength(v, 2), msg: 'El nombre debe tener al menos 2 caracteres' }
+      ],
+      lastName: [
+        { check: (v) => isRequired(v), msg: 'El apellido es obligatorio' },
+        { check: (v) => minLength(v, 2), msg: 'El apellido debe tener al menos 2 caracteres' }
+      ],
+      dni: [
+        { check: (v) => isRequired(v), msg: 'El DNI es obligatorio' },
+        { check: (v) => isDNI(v), msg: 'El DNI debe tener exactamente 8 dígitos' }
+      ],
+      guardianName: [
+        { check: (v) => isRequired(v), msg: 'El nombre del apoderado es obligatorio' },
+        { check: (v) => minLength(v, 3), msg: 'El nombre del apoderado debe tener al menos 3 caracteres' }
+      ]
+    };
+
+    const { isValid, errors: validationErrors } = validateForm(newStudent, rules);
+    setErrors(validationErrors);
+
+    if (!isValid) return;
+
     const created = {
       ...newStudent,
       id: Date.now(),
@@ -122,6 +150,17 @@ export default function UsersPage() {
     };
     setStudents([created, ...students]);
     setIsNewStudentOpen(false);
+    setErrors({});
+    // Reset form
+    setNewStudent({
+      firstName: '',
+      lastName: '',
+      dni: '',
+      studentCode: `EST-2026-000${students.length + 2}`,
+      grade: '3ero de Primaria A',
+      guardianName: '',
+      email: '',
+    });
     showNotice(`Ficha de ${created.firstName} ${created.lastName} registrada correctamente en student-record-service.`);
   };
 
@@ -312,7 +351,7 @@ export default function UsersPage() {
                               {h.gradeLevel}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500 italic">"{h.observations}"</p>
+                          <p className="text-xs text-gray-500 italic">&quot;{h.observations}&quot;</p>
                         </div>
                         <div className="text-right">
                           <span className="text-[10px] text-gray-400 uppercase font-bold block">Promedio Final</span>
@@ -363,9 +402,13 @@ export default function UsersPage() {
                   required
                   type="text"
                   value={newStudent.firstName}
-                  onChange={(e) => setNewStudent({ ...newStudent, firstName: e.target.value })}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  onChange={(e) => {
+                    setNewStudent({ ...newStudent, firstName: e.target.value });
+                    if (errors.firstName) setErrors(prev => ({ ...prev, firstName: null }));
+                  }}
+                  className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${errors.firstName ? 'border-rose-500 ring-1 ring-rose-200' : 'border-gray-200'}`}
                 />
+                {errors.firstName && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.firstName}</p>}
               </div>
               <div>
                 <label className="block text-gray-400 font-bold mb-1">Apellidos</label>
@@ -373,9 +416,13 @@ export default function UsersPage() {
                   required
                   type="text"
                   value={newStudent.lastName}
-                  onChange={(e) => setNewStudent({ ...newStudent, lastName: e.target.value })}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  onChange={(e) => {
+                    setNewStudent({ ...newStudent, lastName: e.target.value });
+                    if (errors.lastName) setErrors(prev => ({ ...prev, lastName: null }));
+                  }}
+                  className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${errors.lastName ? 'border-rose-500 ring-1 ring-rose-200' : 'border-gray-200'}`}
                 />
+                {errors.lastName && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.lastName}</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -384,9 +431,13 @@ export default function UsersPage() {
                     required
                     type="text"
                     value={newStudent.dni}
-                    onChange={(e) => setNewStudent({ ...newStudent, dni: e.target.value })}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                    onChange={(e) => {
+                      setNewStudent({ ...newStudent, dni: e.target.value });
+                      if (errors.dni) setErrors(prev => ({ ...prev, dni: null }));
+                    }}
+                    className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${errors.dni ? 'border-rose-500 ring-1 ring-rose-200' : 'border-gray-200'}`}
                   />
+                  {errors.dni && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.dni}</p>}
                 </div>
                 <div>
                   <label className="block text-gray-400 font-bold mb-1">Grado</label>
@@ -408,9 +459,13 @@ export default function UsersPage() {
                   required
                   type="text"
                   value={newStudent.guardianName}
-                  onChange={(e) => setNewStudent({ ...newStudent, guardianName: e.target.value })}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  onChange={(e) => {
+                    setNewStudent({ ...newStudent, guardianName: e.target.value });
+                    if (errors.guardianName) setErrors(prev => ({ ...prev, guardianName: null }));
+                  }}
+                  className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${errors.guardianName ? 'border-rose-500 ring-1 ring-rose-200' : 'border-gray-200'}`}
                 />
+                {errors.guardianName && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.guardianName}</p>}
               </div>
             </div>
             <div className="p-4 bg-gray-50 flex justify-end gap-2">

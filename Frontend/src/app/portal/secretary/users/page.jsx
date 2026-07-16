@@ -21,6 +21,7 @@ import {
 import { apiFetch } from '@/config/api';
 import { useToast } from '@/context/ToastContext';
 import { useConfirmation } from '@/context/ConfirmationContext';
+import { validateForm, isRequired, isDNI, isEmail, isPhone, minLength, maxLength } from '@/hooks/useFormValidation';
 
 export default function UsersPage() {
   const { showToast } = useToast();
@@ -34,6 +35,11 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewUserOpen, setIsNewUserOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Estados de errores de validación por formulario
+  const [createErrors, setCreateErrors] = useState({});
+  const [editErrors, setEditErrors] = useState({});
+  const [vinculoErrors, setVinculoErrors] = useState({});
 
   // Modo edición dentro del modal
   const [isEditMode, setIsEditMode] = useState(false);
@@ -84,18 +90,22 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    fetchDatos();
+    const timer = setTimeout(() => {
+      fetchDatos();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Recargar la ficha del usuario en modal para ver los cambios de desvinculación o edición
   useEffect(() => {
     if (selectedUser) {
       const actual = usuarios.find(u => u.codigoUsuario === selectedUser.codigoUsuario);
       if (actual) {
-        setSelectedUser(actual);
+        setTimeout(() => {
+          setSelectedUser(actual);
+        }, 0);
       }
     }
-  }, [usuarios, vinculaciones]);
+  }, [usuarios, vinculaciones, selectedUser]);
 
   // Activar modo edición cargando los valores actuales
   const startEditMode = () => {
@@ -116,6 +126,52 @@ export default function UsersPage() {
   // Guardar cambios editados en el backend
   const handleUpdateUser = async (e) => {
     e.preventDefault();
+
+    // Construir reglas de validación dinámicas según el rol
+    const editRules = {
+      nombres: [
+        { check: (v) => isRequired(v), msg: 'El nombre es obligatorio' },
+        { check: (v) => minLength(v, 2), msg: 'Mínimo 2 caracteres' },
+        { check: (v) => maxLength(v, 80), msg: 'Máximo 80 caracteres' }
+      ],
+      apellidos: [
+        { check: (v) => isRequired(v), msg: 'Los apellidos son obligatorios' },
+        { check: (v) => minLength(v, 2), msg: 'Mínimo 2 caracteres' },
+        { check: (v) => maxLength(v, 80), msg: 'Máximo 80 caracteres' }
+      ],
+      telefono: [
+        { check: (v) => isRequired(v), msg: 'El teléfono es obligatorio' },
+        { check: (v) => isPhone(v), msg: 'Ingresa un número de teléfono válido (9 dígitos)' }
+      ],
+      ...(selectedUser.rol !== 'ALUMNO' && {
+        email: [
+          { check: (v) => isRequired(v), msg: 'El correo electrónico es obligatorio' },
+          { check: (v) => isEmail(v), msg: 'Ingresa un correo electrónico válido (ej. nombre@dominio.com)' }
+        ]
+      }),
+      ...(selectedUser.rol === 'DOCENTE' && {
+        especialidad: [
+          { check: (v) => isRequired(v), msg: 'La especialidad es obligatoria' },
+          { check: (v) => minLength(v, 3), msg: 'Mínimo 3 caracteres' }
+        ],
+        titulo: [
+          { check: (v) => isRequired(v), msg: 'El título profesional es obligatorio' },
+          { check: (v) => minLength(v, 3), msg: 'Mínimo 3 caracteres' }
+        ]
+      }),
+      ...(selectedUser.rol === 'ALUMNO' && {
+        fechaNacimiento: [
+          { check: (v) => isRequired(v), msg: 'La fecha de nacimiento es obligatoria' }
+        ]
+      })
+    };
+
+    const { isValid, errors } = validateForm(editFormData, editRules);
+    setEditErrors(errors);
+    if (!isValid) {
+      showToast('Por favor corrige los errores en el formulario.', 'error');
+      return;
+    }
 
     const isConfirmed = await askConfirmation({
       title: 'Actualizar Perfil de Usuario',
@@ -154,6 +210,7 @@ export default function UsersPage() {
       // Recargar datos y cerrar edición
       await fetchDatos();
       setIsEditMode(false);
+      setEditErrors({});
 
     } catch (err) {
       showToast(err.message || 'Error al actualizar el usuario.', 'error');
@@ -194,6 +251,57 @@ export default function UsersPage() {
   // Enviar creación de usuario al backend
   const handleCreateUser = async (e) => {
     e.preventDefault();
+
+    // Construir reglas dinámicas según el rol
+    const createRules = {
+      nombres: [
+        { check: (v) => isRequired(v), msg: 'El nombre es obligatorio' },
+        { check: (v) => minLength(v, 2), msg: 'Mínimo 2 caracteres' },
+        { check: (v) => maxLength(v, 80), msg: 'Máximo 80 caracteres' }
+      ],
+      apellidos: [
+        { check: (v) => isRequired(v), msg: 'Los apellidos son obligatorios' },
+        { check: (v) => minLength(v, 2), msg: 'Mínimo 2 caracteres' },
+        { check: (v) => maxLength(v, 80), msg: 'Máximo 80 caracteres' }
+      ],
+      dni: [
+        { check: (v) => isRequired(v), msg: 'El DNI es obligatorio' },
+        { check: (v) => isDNI(v), msg: 'El DNI debe tener exactamente 8 dígitos numéricos' }
+      ],
+      telefono: [
+        { check: (v) => isRequired(v), msg: 'El teléfono es obligatorio' },
+        { check: (v) => isPhone(v), msg: 'Ingresa un número de teléfono válido (9 dígitos)' }
+      ],
+      ...(newRol !== 'ALUMNO' && {
+        email: [
+          { check: (v) => isRequired(v), msg: 'El correo electrónico es obligatorio' },
+          { check: (v) => isEmail(v), msg: 'Ingresa un correo electrónico válido (ej. nombre@dominio.com)' }
+        ]
+      }),
+      ...(newRol === 'DOCENTE' && {
+        especialidad: [
+          { check: (v) => isRequired(v), msg: 'La especialidad es obligatoria' },
+          { check: (v) => minLength(v, 3), msg: 'Mínimo 3 caracteres' }
+        ],
+        titulo: [
+          { check: (v) => isRequired(v), msg: 'El título profesional es obligatorio' },
+          { check: (v) => minLength(v, 3), msg: 'Mínimo 3 caracteres' }
+        ]
+      }),
+      ...(newRol === 'ALUMNO' && {
+        fechaNacimiento: [
+          { check: (v) => isRequired(v), msg: 'La fecha de nacimiento es obligatoria' }
+        ]
+      })
+    };
+
+    const { isValid, errors } = validateForm(formData, createRules);
+    setCreateErrors(errors);
+    if (!isValid) {
+      showToast('Por favor corrige los errores antes de guardar.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -224,6 +332,7 @@ export default function UsersPage() {
       
       fetchDatos();
       setIsNewUserOpen(false);
+      setCreateErrors({});
 
       setFormData({
         nombres: '',
@@ -248,6 +357,25 @@ export default function UsersPage() {
   // Enviar vinculación familiar al backend
   const handleVincular = async (e) => {
     e.preventDefault();
+
+    const vinculoRules = {
+      codigoPadre: [
+        { check: (v) => isRequired(v), msg: 'El código del apoderado es obligatorio' },
+        { check: (v) => /^PA\d{8}$/i.test(String(v).trim()), msg: 'Formato inválido. Debe ser PA seguido de 8 dígitos (ej: PA20260001)' }
+      ],
+      codigoAlumno: [
+        { check: (v) => isRequired(v), msg: 'El código del estudiante es obligatorio' },
+        { check: (v) => /^AL\d{8}$/i.test(String(v).trim()), msg: 'Formato inválido. Debe ser AL seguido de 8 dígitos (ej: AL20260001)' }
+      ]
+    };
+
+    const { isValid, errors } = validateForm(vinculo, vinculoRules);
+    setVinculoErrors(errors);
+    if (!isValid) {
+      showToast('Por favor corrige los errores en los códigos ingresados.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -263,6 +391,7 @@ export default function UsersPage() {
       
       fetchDatos();
       setVinculo({ codigoPadre: '', codigoAlumno: '' });
+      setVinculoErrors({});
 
     } catch (err) {
       showToast(err.message || 'Error al vincular apoderado.', 'error');
@@ -386,9 +515,15 @@ export default function UsersPage() {
                       type="text"
                       placeholder="Ej: PA20260001"
                       value={vinculo.codigoPadre}
-                      onChange={(e) => setVinculo({ ...vinculo, codigoPadre: e.target.value.toUpperCase() })}
-                      className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553] font-mono"
+                      onChange={(e) => {
+                        setVinculo({ ...vinculo, codigoPadre: e.target.value.toUpperCase() });
+                        if (vinculoErrors.codigoPadre) setVinculoErrors(prev => ({ ...prev, codigoPadre: null }));
+                      }}
+                      className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] font-mono ${
+                        vinculoErrors.codigoPadre ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                      }`}
                     />
+                    {vinculoErrors.codigoPadre && <p className="text-[10px] text-rose-600 font-bold mt-1">{vinculoErrors.codigoPadre}</p>}
                   </div>
                   <div>
                     <label className="block text-gray-400 font-bold mb-1">Código del Estudiante (Hijo)</label>
@@ -397,9 +532,15 @@ export default function UsersPage() {
                       type="text"
                       placeholder="Ej: AL20260001"
                       value={vinculo.codigoAlumno}
-                      onChange={(e) => setVinculo({ ...vinculo, codigoAlumno: e.target.value.toUpperCase() })}
-                      className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553] font-mono"
+                      onChange={(e) => {
+                        setVinculo({ ...vinculo, codigoAlumno: e.target.value.toUpperCase() });
+                        if (vinculoErrors.codigoAlumno) setVinculoErrors(prev => ({ ...prev, codigoAlumno: null }));
+                      }}
+                      className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] font-mono ${
+                        vinculoErrors.codigoAlumno ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                      }`}
                     />
+                    {vinculoErrors.codigoAlumno && <p className="text-[10px] text-rose-600 font-bold mt-1">{vinculoErrors.codigoAlumno}</p>}
                   </div>
                 </div>
 
@@ -691,9 +832,15 @@ export default function UsersPage() {
                           required
                           type="text"
                           value={editFormData.nombres}
-                          onChange={(e) => setEditFormData({ ...editFormData, nombres: e.target.value })}
-                          className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-[#031553] text-[#031553]"
+                          onChange={(e) => {
+                            setEditFormData({ ...editFormData, nombres: e.target.value });
+                            if (editErrors.nombres) setEditErrors(prev => ({ ...prev, nombres: null }));
+                          }}
+                          className={`w-full p-2 bg-white border rounded-lg outline-none focus:border-[#031553] text-[#031553] ${
+                            editErrors.nombres ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                          }`}
                         />
+                        {editErrors.nombres && <p className="text-[10px] text-rose-600 font-bold mt-1">{editErrors.nombres}</p>}
                       </div>
                       <div>
                         <label className="block text-gray-400 font-bold mb-1">Apellidos</label>
@@ -701,9 +848,15 @@ export default function UsersPage() {
                           required
                           type="text"
                           value={editFormData.apellidos}
-                          onChange={(e) => setEditFormData({ ...editFormData, apellidos: e.target.value })}
-                          className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-[#031553] text-[#031553]"
+                          onChange={(e) => {
+                            setEditFormData({ ...editFormData, apellidos: e.target.value });
+                            if (editErrors.apellidos) setEditErrors(prev => ({ ...prev, apellidos: null }));
+                          }}
+                          className={`w-full p-2 bg-white border rounded-lg outline-none focus:border-[#031553] text-[#031553] ${
+                            editErrors.apellidos ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                          }`}
                         />
+                        {editErrors.apellidos && <p className="text-[10px] text-rose-600 font-bold mt-1">{editErrors.apellidos}</p>}
                       </div>
                       {selectedUser.rol !== 'ALUMNO' && (
                         <div>
@@ -712,9 +865,15 @@ export default function UsersPage() {
                             required
                             type="email"
                             value={editFormData.email}
-                            onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-[#031553] text-[#031553]"
+                            onChange={(e) => {
+                              setEditFormData({ ...editFormData, email: e.target.value });
+                              if (editErrors.email) setEditErrors(prev => ({ ...prev, email: null }));
+                            }}
+                            className={`w-full p-2 bg-white border rounded-lg outline-none focus:border-[#031553] text-[#031553] ${
+                              editErrors.email ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                            }`}
                           />
+                          {editErrors.email && <p className="text-[10px] text-rose-600 font-bold mt-1">{editErrors.email}</p>}
                         </div>
                       )}
                       <div>
@@ -723,9 +882,15 @@ export default function UsersPage() {
                           required
                           type="text"
                           value={editFormData.telefono}
-                          onChange={(e) => setEditFormData({ ...editFormData, telefono: e.target.value })}
-                          className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-[#031553] text-[#031553]"
+                          onChange={(e) => {
+                            setEditFormData({ ...editFormData, telefono: e.target.value });
+                            if (editErrors.telefono) setEditErrors(prev => ({ ...prev, telefono: null }));
+                          }}
+                          className={`w-full p-2 bg-white border rounded-lg outline-none focus:border-[#031553] text-[#031553] ${
+                            editErrors.telefono ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                          }`}
                         />
+                        {editErrors.telefono && <p className="text-[10px] text-rose-600 font-bold mt-1">{editErrors.telefono}</p>}
                       </div>
 
                       {/* ALUMNO EDICIÓN */}
@@ -939,9 +1104,15 @@ export default function UsersPage() {
                   required
                   type="text"
                   value={formData.nombres}
-                  onChange={(e) => setFormData({ ...formData, nombres: e.target.value })}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  onChange={(e) => {
+                    setFormData({ ...formData, nombres: e.target.value });
+                    if (createErrors.nombres) setCreateErrors(prev => ({ ...prev, nombres: null }));
+                  }}
+                  className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                    createErrors.nombres ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                  }`}
                 />
+                {createErrors.nombres && <p className="text-[10px] text-rose-600 font-bold mt-1">{createErrors.nombres}</p>}
               </div>
               <div>
                 <label className="block text-gray-400 font-bold mb-1">Apellidos</label>
@@ -949,9 +1120,15 @@ export default function UsersPage() {
                   required
                   type="text"
                   value={formData.apellidos}
-                  onChange={(e) => setFormData({ ...formData, apellidos: e.target.value })}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  onChange={(e) => {
+                    setFormData({ ...formData, apellidos: e.target.value });
+                    if (createErrors.apellidos) setCreateErrors(prev => ({ ...prev, apellidos: null }));
+                  }}
+                  className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                    createErrors.apellidos ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                  }`}
                 />
+                {createErrors.apellidos && <p className="text-[10px] text-rose-600 font-bold mt-1">{createErrors.apellidos}</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -959,20 +1136,34 @@ export default function UsersPage() {
                   <input
                     required
                     type="text"
+                    maxLength={8}
                     value={formData.dni}
-                    onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                    onChange={(e) => {
+                      setFormData({ ...formData, dni: e.target.value.replace(/\D/g, '') });
+                      if (createErrors.dni) setCreateErrors(prev => ({ ...prev, dni: null }));
+                    }}
+                    className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                      createErrors.dni ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                    }`}
                   />
+                  {createErrors.dni && <p className="text-[10px] text-rose-600 font-bold mt-1">{createErrors.dni}</p>}
                 </div>
                 <div>
                   <label className="block text-gray-400 font-bold mb-1">Celular / Teléfono</label>
                   <input
                     required
                     type="text"
+                    maxLength={9}
                     value={formData.telefono}
-                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                    onChange={(e) => {
+                      setFormData({ ...formData, telefono: e.target.value.replace(/\D/g, '') });
+                      if (createErrors.telefono) setCreateErrors(prev => ({ ...prev, telefono: null }));
+                    }}
+                    className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                      createErrors.telefono ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                    }`}
                   />
+                  {createErrors.telefono && <p className="text-[10px] text-rose-600 font-bold mt-1">{createErrors.telefono}</p>}
                 </div>
               </div>
               {newRol !== 'ALUMNO' && (
@@ -982,9 +1173,15 @@ export default function UsersPage() {
                     required
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (createErrors.email) setCreateErrors(prev => ({ ...prev, email: null }));
+                    }}
+                    className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                      createErrors.email ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                    }`}
                   />
+                  {createErrors.email && <p className="text-[10px] text-rose-600 font-bold mt-1">{createErrors.email}</p>}
                 </div>
               )}
 

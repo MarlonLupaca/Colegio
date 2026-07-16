@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Megaphone, 
@@ -31,28 +31,42 @@ export default function SecretaryAnnouncementsPage() {
     isPinned: false
   });
 
+  // Estado de errores del formulario de redacción
+  const [formErrors, setFormErrors] = useState({});
+
   // Cargar publicaciones del backend
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     try {
       const data = await apiFetch('/api/v1/announcement');
       setAnnouncements(data || []);
     } catch (err) {
       console.error('Error cargando anuncios:', err.message);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+    const timer = setTimeout(() => {
+      fetchAnnouncements();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchAnnouncements]);
 
   // Guardar publicación (POST)
   const handlePublish = async (e) => {
     e.preventDefault();
-    
+
+    // Validaciones del formulario de redacción
+    const errs = {};
     if (!formData.content.trim()) {
-      showToast('El contenido de la publicación no puede estar vacío.', 'error');
-      return;
+      errs.content = 'El cuerpo del mensaje es obligatorio';
+    } else if (formData.content.trim().length < 10) {
+      errs.content = 'El mensaje debe tener al menos 10 caracteres';
     }
+    if (formData.title && formData.title.length > 150) {
+      errs.title = 'El título no puede superar los 150 caracteres';
+    }
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
     try {
@@ -71,10 +85,11 @@ export default function SecretaryAnnouncementsPage() {
         body: JSON.stringify(payload)
       });
 
-      showToast('¡Anuncio publicado correctamente en la pizarra del colegio!', 'success');
+      showToast('!¡Anuncio publicado correctamente en la pizarra del colegio!', 'success');
       
       // Limpiar formulario y recargar
       setFormData({ title: '', content: '', isPinned: false });
+      setFormErrors({});
       fetchAnnouncements();
     } catch (err) {
       showToast(err.message || 'No se pudo publicar el anuncio.', 'error');
@@ -139,14 +154,24 @@ export default function SecretaryAnnouncementsPage() {
           </h2>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Título del Comunicado (Opcional)</label>
+            <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">
+              Título del Comunicado <span className="font-normal text-gray-400">(Opcional, max. 150 caracteres)</span>
+            </label>
             <input
               type="text"
+              maxLength={150}
               placeholder="Ej. Comunicado N° 045: Entrega de Reportes"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full bg-slate-50 border border-gray-200 rounded-xl py-2 px-3 text-xs text-primary outline-none focus:border-primary/40 transition-all"
+              onChange={(e) => {
+                setFormData({ ...formData, title: e.target.value });
+                if (formErrors.title) setFormErrors(prev => ({ ...prev, title: null }));
+              }}
+              className={`w-full bg-slate-50 border rounded-xl py-2 px-3 text-xs text-primary outline-none focus:border-primary/40 transition-all ${
+                formErrors.title ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+              }`}
             />
+            {formErrors.title && <p className="text-[10px] text-rose-600 font-bold">{formErrors.title}</p>}
+            <p className="text-[9px] text-gray-400 text-right">{formData.title.length}/150</p>
           </div>
 
           <div className="space-y-1">
@@ -156,9 +181,16 @@ export default function SecretaryAnnouncementsPage() {
               rows="6"
               placeholder="Escribe aquí el contenido del aviso oficial para alumnos, padres y docentes..."
               value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full bg-slate-50 border border-gray-200 rounded-xl py-2.5 px-3 text-xs text-primary outline-none focus:border-primary/40 transition-all resize-none leading-relaxed"
+              onChange={(e) => {
+                setFormData({ ...formData, content: e.target.value });
+                if (formErrors.content) setFormErrors(prev => ({ ...prev, content: null }));
+              }}
+              className={`w-full bg-slate-50 border rounded-xl py-2.5 px-3 text-xs text-primary outline-none focus:border-primary/40 transition-all resize-none leading-relaxed ${
+                formErrors.content ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+              }`}
             />
+            {formErrors.content && <p className="text-[10px] text-rose-600 font-bold">{formErrors.content}</p>}
+            <p className="text-[9px] text-gray-400 text-right">{formData.content.length} caracteres</p>
           </div>
 
           <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-gray-100 select-none">

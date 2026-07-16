@@ -41,6 +41,7 @@ export default function GradingPage() {
     maxScore: 20,
     weight: '25%',
   });
+  const [examErrors, setExamErrors] = useState({});
 
   const selectedExam = exams.find((e) => e.id === Number(selectedExamId));
 
@@ -67,10 +68,28 @@ export default function GradingPage() {
 
   const handleCreateExam = (e) => {
     e.preventDefault();
+    const errs = {};
+    if (!newExam.title.trim()) {
+      errs.title = 'El título de la evaluación es obligatorio';
+    } else if (newExam.title.trim().length < 5) {
+      errs.title = 'El título debe tener al menos 5 caracteres';
+    }
+    if (!newExam.weight.trim()) {
+      errs.weight = 'El peso porcentual es obligatorio';
+    } else {
+      const weightNum = parseFloat(newExam.weight.replace('%', ''));
+      if (isNaN(weightNum) || weightNum <= 0 || weightNum > 100) {
+        errs.weight = 'Ingresa un porcentaje válido entre 1% y 100%';
+      }
+    }
+    setExamErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
     const created = { ...newExam, id: Date.now() };
     setExams([created, ...exams]);
     setSelectedExamId(created.id);
     setIsNewExamOpen(false);
+    setExamErrors({});
     showNotice(`Evaluación "${created.title}" programada en exam-service.`);
   };
 
@@ -240,15 +259,21 @@ export default function GradingPage() {
             </div>
             <div className="p-6 space-y-4 text-xs">
               <div>
-                <label className="block text-gray-400 font-bold mb-1">Título de la Evaluación</label>
+                <label className="block text-gray-400 font-bold mb-1">Título de la Evaluación *</label>
                 <input
                   required
                   type="text"
                   placeholder="Ej. Práctica Calificada 2"
                   value={newExam.title}
-                  onChange={(e) => setNewExam({ ...newExam, title: e.target.value })}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  onChange={(e) => {
+                    setNewExam({ ...newExam, title: e.target.value });
+                    if (examErrors.title) setExamErrors(prev => ({ ...prev, title: null }));
+                  }}
+                  className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                    examErrors.title ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                  }`}
                 />
+                {examErrors.title && <p className="text-[10px] text-rose-600 font-bold mt-1">{examErrors.title}</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -261,15 +286,21 @@ export default function GradingPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 font-bold mb-1">Peso %</label>
+                  <label className="block text-gray-400 font-bold mb-1">Peso % *</label>
                   <input
                     required
                     type="text"
                     placeholder="Ej. 25%"
                     value={newExam.weight}
-                    onChange={(e) => setNewExam({ ...newExam, weight: e.target.value })}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                    onChange={(e) => {
+                      setNewExam({ ...newExam, weight: e.target.value });
+                      if (examErrors.weight) setExamErrors(prev => ({ ...prev, weight: null }));
+                    }}
+                    className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                      examErrors.weight ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                    }`}
                   />
+                  {examErrors.weight && <p className="text-[10px] text-rose-600 font-bold mt-1">{examErrors.weight}</p>}
                 </div>
               </div>
             </div>

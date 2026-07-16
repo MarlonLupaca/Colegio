@@ -44,7 +44,10 @@ export default function AdminClassroomsPage() {
   }, [showToast]);
 
   useEffect(() => {
-    fetchClassrooms();
+    const timer = setTimeout(() => {
+      fetchClassrooms();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchClassrooms]);
 
 

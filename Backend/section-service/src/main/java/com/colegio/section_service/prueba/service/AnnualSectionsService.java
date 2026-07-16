@@ -87,7 +87,8 @@ public class AnnualSectionsService {
         section.setEducationLevel(details.getEducationLevel());
         section.setGradeLevel(details.getGradeLevel());
         section.setSectionLetter(details.getSectionLetter());
-        section.setTutorTeacherId(details.getTutorTeacherId());
+        section.setTutorCode(details.getTutorCode());
+        section.setMaxWeeklyHours(details.getMaxWeeklyHours() != null ? details.getMaxWeeklyHours() : 30);
 
         boolean cambioDeAula = details.getClassroom() != null &&
                 (section.getClassroom() == null ||
@@ -122,7 +123,8 @@ public class AnnualSectionsService {
                     newSection.setEducationLevel(prev.getEducationLevel());
                     newSection.setGradeLevel(prev.getGradeLevel());
                     newSection.setSectionLetter(prev.getSectionLetter());
-                    newSection.setTutorTeacherId(prev.getTutorTeacherId());
+                    newSection.setTutorCode(prev.getTutorCode());
+                    newSection.setMaxWeeklyHours(prev.getMaxWeeklyHours());
 
                     Classroom classroom = prev.getClassroom();
                     boolean ocupadaEnNuevoAnio = classroom != null &&
