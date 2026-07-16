@@ -55,17 +55,7 @@ export default function SectionInfoTab({ section, onUpdate }) {
     return `${grade}${suffix}`;
   };
 
-  const InfoRow = ({ label, value, icon: Icon }) => (
-    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-gray-100">
-      <div className="p-2 bg-white rounded-lg text-primary/60">
-        <Icon className="w-4 h-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">{label}</p>
-        <p className="text-sm font-semibold text-primary truncate">{value || 'No asignado'}</p>
-      </div>
-    </div>
-  );
+
 
   return (
     <div className="space-y-6">
@@ -206,3 +196,16 @@ export default function SectionInfoTab({ section, onUpdate }) {
     </div>
   );
 }
+
+// ── Helper: fila de información (declarado fuera) ──────────────────────────
+const InfoRow = ({ label, value, icon: Icon }) => (
+  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-gray-100">
+    <div className="p-2 bg-white rounded-lg text-primary/60">
+      <Icon className="w-4 h-4" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">{label}</p>
+      <p className="text-sm font-semibold text-primary truncate">{value || 'No asignado'}</p>
+    </div>
+  </div>
+);

@@ -56,17 +56,7 @@ export default function SectionInfoTab({ section, onUpdate }) {
     return `${grade}${suffix}`;
   };
 
-  const InfoRow = ({ label, value, icon: Icon }) => (
-    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-gray-100">
-      <div className="p-2 bg-white rounded-lg text-primary/60">
-        <Icon className="w-4 h-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">{label}</p>
-        <p className="text-sm font-semibold text-primary truncate">{value || 'No asignado'}</p>
-      </div>
-    </div>
-  );
+
 
   return (
     <div className="space-y-6">
@@ -138,14 +128,19 @@ export default function SectionInfoTab({ section, onUpdate }) {
             <select
               value={formData.grade}
               onChange={(e) => setFormData({ ...formData, grade: parseInt(e.target.value) })}
-              className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-primary outline-none focus:border-primary/40"
+              className="w-full p-1 bg-white border border-gray-200 rounded-lg text-xs"
             >
-              {[1,2,3,4,5,6].map(g => (
-                <option key={g} value={g}>{g}° {section.level?.toUpperCase() === 'PRIMARIA' ? 'Grado' : 'Año'}</option>
-              ))}
+              <option value="1">1° Grado</option>
+              <option value="2">2° Grado</option>
+              <option value="3">3° Grado</option>
+              <option value="4">4° Grado</option>
+              <option value="5">5° Grado</option>
+              <option value="6">6° Grado</option>
             </select>
-          ) : getGradeLabel(section.grade, section.level)}
-          icon={Users}
+          ) : (
+            getGradeLabel(section.grade, section.level)
+          )}
+          icon={GraduationCap}
         />
 
         <InfoRow
@@ -154,14 +149,17 @@ export default function SectionInfoTab({ section, onUpdate }) {
             <select
               value={formData.sectionLetter}
               onChange={(e) => setFormData({ ...formData, sectionLetter: e.target.value })}
-              className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-primary outline-none focus:border-primary/40"
+              className="w-full p-1 bg-white border border-gray-200 rounded-lg text-xs"
             >
-              {['A','B','C','D','E'].map(l => (
-                <option key={l} value={l}>{l}</option>
-              ))}
+              <option value="A">Sección A</option>
+              <option value="B">Sección B</option>
+              <option value="C">Sección C</option>
+              <option value="D">Sección D</option>
             </select>
-          ) : section.section}
-          icon={Users}
+          ) : (
+            `Sección ${section.section}`
+          )}
+          icon={GraduationCap}
         />
 
         {/* Aula: muestra texto compuesto de roomNumber + building */}
@@ -186,17 +184,21 @@ export default function SectionInfoTab({ section, onUpdate }) {
         />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-4 text-center border border-blue-100/50">
-          <p className="text-2xl font-bold text-primary">{section.courses?.length || 0}</p>
-          <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">Cursos Asignados</p>
-        </div>
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-4 text-center border border-emerald-100/50">
+      {/* Stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 bg-[#031553]/5 rounded-2xl border border-[#031553]/10">
+        <div>
           <p className="text-2xl font-bold text-primary">0</p>
           <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">Estudiantes</p>
         </div>
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-xl p-4 text-center border border-amber-100/50">
+        <div>
+          <p className="text-2xl font-bold text-primary">0</p>
+          <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">Cursos Activos</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-primary">0%</p>
+          <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">Asistencia Promedio</p>
+        </div>
+        <div>
           <p className="text-2xl font-bold text-primary">0</p>
           <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">Horas Semanales</p>
         </div>
@@ -213,3 +215,16 @@ export default function SectionInfoTab({ section, onUpdate }) {
     </div>
   );
 }
+
+// ── Helper: fila de información (declarado fuera) ──────────────────────────
+const InfoRow = ({ label, value, icon: Icon }) => (
+  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-gray-100">
+    <div className="p-2 bg-white rounded-lg text-primary/60">
+      <Icon className="w-4 h-4" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider">{label}</p>
+      <p className="text-sm font-semibold text-primary truncate">{value || 'No asignado'}</p>
+    </div>
+  </div>
+);

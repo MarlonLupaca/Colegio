@@ -42,6 +42,9 @@ public class Course {
     @NotNull(message = "El área académica es obligatoria")
     private AcademicArea academicArea;
 
+    @Column(name = "teacher_code", length = 50)
+    private String teacherCode;
+
     @Column(name = "hours_per_week")
     @NotNull(message = "Las horas por semana son obligatorias")
     private Integer hoursPerWeek;

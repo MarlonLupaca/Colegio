@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   BookOpen,
   Search,
@@ -15,6 +15,7 @@ import {
 import { apiFetch } from '@/config/api';
 import { useToast } from '@/context/ToastContext';
 import { useConfirmation } from '@/context/ConfirmationContext';
+import { validateForm, isRequired, minLength, isInRange } from '@/hooks/useFormValidation';
 
 export default function AdminCoursesPage() {
   const { showToast } = useToast();
@@ -23,11 +24,22 @@ export default function AdminCoursesPage() {
   const [courses, setCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
   
   // Modales
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+
+  // Estados de errores de validación
+  const [createErrors, setCreateErrors] = useState({});
+  const [editErrors, setEditErrors] = useState({});
 
   // Formulario de creación
   const [formData, setFormData] = useState({
@@ -49,23 +61,80 @@ export default function AdminCoursesPage() {
     hoursPerWeek: 4
   });
 
+  // Resetear errores cuando cambian los modales
+  useEffect(() => {
+    if (!isNewOpen) {
+      setTimeout(() => {
+        setCreateErrors({});
+      }, 0);
+    }
+  }, [isNewOpen]);
+
+  useEffect(() => {
+    if (!isEditOpen) {
+      setTimeout(() => {
+        setEditErrors({});
+      }, 0);
+    }
+  }, [isEditOpen]);
+
   // Cargar cursos desde el backend
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       const data = await apiFetch('/api/v1/courses');
       setCourses(data || []);
     } catch (err) {
       console.error('Error cargando cursos:', err.message);
     }
-  };
+  }, []);
+
+  const [allUsers, setAllUsers] = useState([]);
+  const fetchUsers = useCallback(async () => {
+    try {
+      const users = await apiFetch('/api/user/usuarios');
+      setAllUsers(users || []);
+    } catch (err) {
+      console.error('Error cargando usuarios:', err.message);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    const timer = setTimeout(() => {
+      fetchCourses();
+      fetchUsers();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchCourses, fetchUsers]);
+
+  const getTeacherForCourse = (teacherCode) => {
+    if (!teacherCode) return 'Sin docente asignado';
+    const user = allUsers.find(u => u.codigoUsuario === teacherCode);
+    return user ? `${user.nombres} ${user.apellidos}` : teacherCode;
+  };
 
   // Guardar un nuevo curso
   const handleCreateCourse = async (e) => {
     e.preventDefault();
+
+    const rules = {
+      name: [
+        { check: (v) => isRequired(v), msg: 'El nombre es obligatorio' },
+        { check: (v) => minLength(v, 3), msg: 'El nombre debe tener al menos 3 caracteres' }
+      ],
+      hoursPerWeek: [
+        { check: (v) => isRequired(v), msg: 'Las horas semanales son obligatorias' },
+        { check: (v) => isInRange(v, 1, 15), msg: 'Las horas semanales deben estar entre 1 y 15' }
+      ]
+    };
+
+    const { isValid, errors: valErrors } = validateForm(formData, rules);
+    setCreateErrors(valErrors);
+
+    if (!isValid) {
+      showToast('Por favor corrige los errores del formulario.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -77,6 +146,7 @@ export default function AdminCoursesPage() {
       showToast(`Curso '${result.name}' registrado con éxito.`, 'success');
       fetchCourses();
       setIsNewOpen(false);
+      setCreateErrors({});
       
       setFormData({
         name: '',
@@ -97,6 +167,25 @@ export default function AdminCoursesPage() {
   // Guardar modificaciones del curso
   const handleUpdateCourse = async (e) => {
     e.preventDefault();
+
+    const rules = {
+      name: [
+        { check: (v) => isRequired(v), msg: 'El nombre es obligatorio' },
+        { check: (v) => minLength(v, 3), msg: 'El nombre debe tener al menos 3 caracteres' }
+      ],
+      hoursPerWeek: [
+        { check: (v) => isRequired(v), msg: 'Las horas semanales son obligatorias' },
+        { check: (v) => isInRange(v, 1, 15), msg: 'Las horas semanales deben estar entre 1 y 15' }
+      ]
+    };
+
+    const { isValid, errors: valErrors } = validateForm(editFormData, rules);
+    setEditErrors(valErrors);
+
+    if (!isValid) {
+      showToast('Por favor corrige los errores del formulario.', 'error');
+      return;
+    }
     
     const isConfirmed = await askConfirmation({
       title: 'Modificar Curso',
@@ -118,6 +207,7 @@ export default function AdminCoursesPage() {
       fetchCourses();
       setIsEditOpen(false);
       setSelectedCourse(null);
+      setEditErrors({});
     } catch (err) {
       showToast(err.message || 'Error al actualizar el curso.', 'error');
     } finally {
@@ -174,12 +264,24 @@ export default function AdminCoursesPage() {
     }
   };
 
+  // Ordenar cursos por fecha de creación descendente (los más nuevos primero)
+  const sortedCourses = [...courses].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateB - dateA;
+  });
+
   // Filtrar cursos
-  const filteredCourses = courses.filter(c =>
+  const filteredCourses = sortedCourses.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.academicArea.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalItems = filteredCourses.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCourses = filteredCourses.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="w-full animate-fade-in pb-12 space-y-6 text-xs text-[#031553]">
@@ -223,19 +325,20 @@ export default function AdminCoursesPage() {
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
+             <thead>
               <tr className="bg-gray-50/75 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                 <th className="py-3.5 px-6">Código / Asignatura</th>
                 <th className="py-3.5 px-6">Área Académica</th>
                 <th className="py-3.5 px-6">Nivel Educativo</th>
                 <th className="py-3.5 px-6">Grado</th>
-                <th className="py-3.5 px-6">Horas/Semana</th>
+                <th className="py-3.5 px-6">Docente</th>
+                <th className="py-3.5 px-6 text-center">Horas/Semana</th>
                 <th className="py-3.5 px-6">Estado</th>
                 <th className="py-3.5 px-6 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-xs">
-              {filteredCourses.map((c) => (
+              {paginatedCourses.map((c) => (
                 <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="py-4 px-6">
                     <div>
@@ -254,14 +357,20 @@ export default function AdminCoursesPage() {
                   <td className="py-4 px-6 font-bold text-gray-600">
                     {c.gradeLevel} Grado
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-4 px-6 font-semibold text-gray-600">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                      <span>{getTeacherForCourse(c.teacherCode)}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-center">
                     <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold text-gray-600">
                       <Clock className="w-3 h-3" /> {c.hoursPerWeek} hrs
                     </span>
                   </td>
                   <td className="py-4 px-6">
                     <button
-                      onClick={() => toggleCourseStatus(c)}
+                       onClick={() => toggleCourseStatus(c)}
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
                         c.isActive
                           ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
@@ -304,7 +413,7 @@ export default function AdminCoursesPage() {
               ))}
               {filteredCourses.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="text-center py-12 text-gray-400">
+                  <td colSpan="8" className="text-center py-12 text-gray-400">
                     No se encontraron asignaturas registradas.
                   </td>
                 </tr>
@@ -312,6 +421,75 @@ export default function AdminCoursesPage() {
             </tbody>
           </table>
         </div>
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 bg-white px-6 py-4 sm:px-6 select-none">
+            <div className="flex flex-1 justify-between sm:hidden">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="relative ml-3 inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs text-gray-700">
+                  Mostrando <span className="font-bold text-[#031553]">{startIndex + 1}</span> a{' '}
+                  <span className="font-bold text-[#031553]">{Math.min(startIndex + itemsPerPage, totalItems)}</span> de{' '}
+                  <span className="font-bold text-[#031553]">{totalItems}</span> resultados
+                </p>
+              </div>
+              <div>
+                <nav className="isolate inline-flex -space-x-px rounded-xl shadow-xs gap-1" aria-label="Pagination">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-lg p-2 text-gray-400 hover:bg-slate-50 border border-gray-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Anterior</span>
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`relative inline-flex items-center rounded-lg px-3 py-1 text-xs font-bold border transition-colors cursor-pointer ${
+                        currentPage === page
+                          ? 'z-10 bg-[#031553] text-white border-[#031553] shadow-xs'
+                          : 'bg-white text-gray-600 border-gray-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center rounded-lg p-2 text-gray-400 hover:bg-slate-50 border border-gray-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Siguiente</span>
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal: Registrar Asignatura */}
@@ -332,15 +510,21 @@ export default function AdminCoursesPage() {
             </div>
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
-                <label className="block text-gray-400 font-bold mb-1">Nombre del Curso</label>
+                <label className="block text-gray-400 font-bold mb-1">Nombre del Curso *</label>
                 <input
                   required
                   type="text"
                   placeholder="Ej: Álgebra y Lógica"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    if (createErrors.name) setCreateErrors(prev => ({ ...prev, name: null }));
+                  }}
+                  className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                    createErrors.name ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                  }`}
                 />
+                {createErrors.name && <p className="text-[10px] text-rose-600 font-bold mt-1">{createErrors.name}</p>}
               </div>
 
               <div>
@@ -391,16 +575,22 @@ export default function AdminCoursesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-400 font-bold mb-1">Horas/Semana</label>
+                  <label className="block text-gray-400 font-bold mb-1">Horas/Semana *</label>
                   <input
                     required
                     type="number"
                     min="1"
                     max="15"
                     value={formData.hoursPerWeek}
-                    onChange={(e) => setFormData({ ...formData, hoursPerWeek: parseInt(e.target.value) })}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                    onChange={(e) => {
+                      setFormData({ ...formData, hoursPerWeek: parseInt(e.target.value) });
+                      if (createErrors.hoursPerWeek) setCreateErrors(prev => ({ ...prev, hoursPerWeek: null }));
+                    }}
+                    className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                      createErrors.hoursPerWeek ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                    }`}
                   />
+                  {createErrors.hoursPerWeek && <p className="text-[10px] text-rose-600 font-bold mt-1">{createErrors.hoursPerWeek}</p>}
                 </div>
               </div>
 
@@ -456,14 +646,20 @@ export default function AdminCoursesPage() {
             </div>
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
-                <label className="block text-gray-400 font-bold mb-1">Nombre del Curso</label>
+                <label className="block text-gray-400 font-bold mb-1">Nombre del Curso *</label>
                 <input
                   required
                   type="text"
                   value={editFormData.name}
-                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                  onChange={(e) => {
+                    setEditFormData({ ...editFormData, name: e.target.value });
+                    if (editErrors.name) setEditErrors(prev => ({ ...prev, name: null }));
+                  }}
+                  className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                    editErrors.name ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                  }`}
                 />
+                {editErrors.name && <p className="text-[10px] text-rose-600 font-bold mt-1">{editErrors.name}</p>}
               </div>
 
               <div>
@@ -514,16 +710,22 @@ export default function AdminCoursesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-400 font-bold mb-1">Horas/Semana</label>
+                  <label className="block text-gray-400 font-bold mb-1">Horas/Semana *</label>
                   <input
                     required
                     type="number"
                     min="1"
                     max="15"
                     value={editFormData.hoursPerWeek}
-                    onChange={(e) => setEditFormData({ ...editFormData, hoursPerWeek: parseInt(e.target.value) })}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+                    onChange={(e) => {
+                      setEditFormData({ ...editFormData, hoursPerWeek: parseInt(e.target.value) });
+                      if (editErrors.hoursPerWeek) setEditErrors(prev => ({ ...prev, hoursPerWeek: null }));
+                    }}
+                    className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${
+                      editErrors.hoursPerWeek ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+                    }`}
                   />
+                  {editErrors.hoursPerWeek && <p className="text-[10px] text-rose-600 font-bold mt-1">{editErrors.hoursPerWeek}</p>}
                 </div>
               </div>
 

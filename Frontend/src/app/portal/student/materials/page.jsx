@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FolderOpen, Download, Search, BookOpen, Eye, Filter, Loader2, Calendar } from 'lucide-react';
 import { apiFetch, API_BASE_URL, cookies } from '@/config/api';
 import { useToast } from '@/context/ToastContext';
@@ -34,11 +34,7 @@ export default function StudentMaterialsPage() {
   const [selectedWeek, setSelectedWeek]     = useState('');
   const [searchTerm, setSearchTerm]         = useState('');
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const data = await apiFetch('/api/v1/courses');
@@ -56,7 +52,14 @@ export default function StudentMaterialsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadAll();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadAll]);
 
   useEffect(() => {
     if (selectedCourse) {
@@ -64,9 +67,12 @@ export default function StudentMaterialsPage() {
         .then(setWeeks)
         .catch(() => setWeeks([]));
     } else {
-      setWeeks([]);
-      setSelectedWeek('');
-      setSelTrim('');
+      const timer = setTimeout(() => {
+        setWeeks([]);
+        setSelectedWeek('');
+        setSelTrim('');
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [selectedCourse]);
 

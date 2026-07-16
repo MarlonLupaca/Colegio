@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   FolderKanban,
   CheckCircle2,
@@ -24,7 +24,7 @@ export default function EnrollmentPage() {
   const [loading, setLoading] = useState(false);
 
   // Cargar datos consolidados
-  const fetchDatosMatricula = async () => {
+  const fetchDatosMatricula = useCallback(async () => {
     setLoading(true);
     try {
       // 1. Alumnos de user-service
@@ -45,11 +45,14 @@ export default function EnrollmentPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDatosMatricula();
-  }, []);
+    const timer = setTimeout(() => {
+      fetchDatosMatricula();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchDatosMatricula]);
 
   // Eliminar matrícula (DELETE con confirmación premium)
   const handleDeleteEnrollment = async (idEnrollment) => {

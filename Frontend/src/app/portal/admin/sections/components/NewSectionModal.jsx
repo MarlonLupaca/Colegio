@@ -39,15 +39,18 @@ export default function NewSectionModal({
   // Resetear formulario al abrir
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        year: new Date().getFullYear().toString(),
-        level: 'primaria',
-        grade: '1',
-        section: 'A',
-        classroom: ''
-      });
-      setErrors({});
-      setIsCopyMode(false);
+      const timer = setTimeout(() => {
+        setFormData({
+          year: new Date().getFullYear().toString(),
+          level: 'primaria',
+          grade: '1',
+          section: 'A',
+          classroom: ''
+        });
+        setErrors({});
+        setIsCopyMode(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 

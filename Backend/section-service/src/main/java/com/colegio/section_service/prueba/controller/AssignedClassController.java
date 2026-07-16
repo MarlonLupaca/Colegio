@@ -57,4 +57,11 @@ public class AssignedClassController {
     public void deleteAssignedClass(@PathVariable UUID id) {
         assignedClassService.deleteAssignedClass(id);
     }
+
+    @PostMapping("/section/{sectionId}/batch")
+    public List<AssignedClass> addCoursesToSectionBatch(
+            @PathVariable UUID sectionId,
+            @RequestBody List<UUID> courseIds) {
+        return assignedClassService.addCoursesToSectionBatch(sectionId, courseIds);
+    }
 }

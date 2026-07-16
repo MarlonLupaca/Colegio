@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -23,7 +23,7 @@ export default function SectionCoursesTab({ section }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Cargar cursos asignados a esta sección
-  const fetchAssignedClasses = async () => {
+  const fetchAssignedClasses = useCallback(async () => {
     if (!section?.id) return;
     setLoading(true);
     try {
@@ -48,11 +48,14 @@ export default function SectionCoursesTab({ section }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [section]);
 
   useEffect(() => {
-    fetchAssignedClasses();
-  }, [section]);
+    const timer = setTimeout(() => {
+      fetchAssignedClasses();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [section, fetchAssignedClasses]);
 
   const handleDeleteCourse = async (assignedClass) => {
     const isConfirmed = await askConfirmation({
@@ -197,7 +200,7 @@ export default function SectionCoursesTab({ section }) {
           <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <h4 className="text-sm font-bold text-secondary">No hay materias vinculadas</h4>
           <p className="text-xs text-secondary/60 mt-1">
-            Haz clic en "Asignar Materias" para comenzar
+            Haz clic en &quot;Asignar Materias&quot; para comenzar
           </p>
         </div>
       )}

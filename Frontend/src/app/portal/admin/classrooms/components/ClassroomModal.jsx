@@ -24,24 +24,27 @@ export default function ClassroomModal({
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (currentClassroom) {
-      setFormData({
-        building: currentClassroom.building || '',
-        roomNumber: currentClassroom.roomNumber || '',
-        maxCapacity: currentClassroom.maxCapacity?.toString() || '25',
-        status: currentClassroom.status || 'DISPONIBLE',
-        type: currentClassroom.type || 'AULA_NORMAL'
-      });
-    } else {
-      setFormData({
-        building: '',
-        roomNumber: '',
-        maxCapacity: '25',
-        status: 'DISPONIBLE',
-        type: 'AULA_NORMAL'
-      });
-    }
-    setErrors({});
+    const timer = setTimeout(() => {
+      if (currentClassroom) {
+        setFormData({
+          building: currentClassroom.building || '',
+          roomNumber: currentClassroom.roomNumber || '',
+          maxCapacity: currentClassroom.maxCapacity?.toString() || '25',
+          status: currentClassroom.status || 'DISPONIBLE',
+          type: currentClassroom.type || 'AULA_NORMAL'
+        });
+      } else {
+        setFormData({
+          building: '',
+          roomNumber: '',
+          maxCapacity: '25',
+          status: 'DISPONIBLE',
+          type: 'AULA_NORMAL'
+        });
+      }
+      setErrors({});
+    }, 0);
+    return () => clearTimeout(timer);
   }, [currentClassroom, isOpen]);
 
   if (!isOpen) return null;

@@ -37,9 +37,15 @@ public class AssignedClass {
     private String teacherName;
 
     @Transient
+    private String teacherCode;
+
+    @Transient
     private String courseName;
 
     @Transient
     private String courseCode;
+
+    @Transient
+    private Integer hoursPerWeek;
 
 }

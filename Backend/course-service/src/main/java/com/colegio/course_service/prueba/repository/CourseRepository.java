@@ -23,4 +23,6 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
     List<Course> findByEducationLevel(EducationLevel educationLevel);
 
     List<Course> findByEducationLevelAndGradeLevel(EducationLevel educationLevel, Integer gradeLevel);
+
+    List<Course> findByTeacherCode(String teacherCode);
 }

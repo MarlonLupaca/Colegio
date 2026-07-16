@@ -28,32 +28,20 @@ function ActiveSwitch({ isActive, onToggle, title }) {
 
 export default function CourseTable({ courses, onEdit, onDelete, onToggleActive, onView, onAssignTeacher }) {
   // Cargar relaciones locales de profesores
-  const [localAssignments, setLocalAssignments] = React.useState([]);
   const [allUsers, setAllUsers] = React.useState([]);
 
   React.useEffect(() => {
-    // Cargar nombres de usuarios y asignaciones reales del backend
-    Promise.all([
-      apiFetch('/api/user/usuarios').catch(() => []),
-      apiFetch('/api/v1/assigned-classes').catch(() => [])
-    ]).then(([users, assignedData]) => {
+    // Cargar nombres de usuarios activos
+    apiFetch('/api/user/usuarios').then((users) => {
       setAllUsers(users || []);
-      setLocalAssignments(assignedData || []);
     }).catch(() => {});
   }, [courses]);
 
   // Helper para resolver el nombre del profesor del curso
-  const getTeacherForCourse = (courseId) => {
-    // Buscar en local assignments
-    const match = localAssignments.find(la => la.courseId === courseId);
-    if (match && match.teacherId !== null && match.teacherId !== undefined) {
-      if (match.teacherName && !match.teacherName.startsWith('Profesor ID:')) {
-        return match.teacherName;
-      }
-      const user = allUsers.find(u => u.id === match.teacherId);
-      return user ? `${user.nombres} ${user.apellidos}` : `Profesor ID: ${match.teacherId}`;
-    }
-    return 'Sin docente asignado';
+  const getTeacherForCourse = (teacherCode) => {
+    if (!teacherCode) return 'Sin docente asignado';
+    const user = allUsers.find(u => u.codigoUsuario === teacherCode);
+    return user ? `${user.nombres} ${user.apellidos}` : teacherCode;
   };
 
   return (
@@ -114,7 +102,7 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
               <td className="py-3 px-4 text-secondary font-semibold">
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
-                  <span>{getTeacherForCourse(course.id)}</span>
+                  <span>{getTeacherForCourse(course.teacherCode)}</span>
                 </div>
               </td>
 
@@ -142,7 +130,7 @@ export default function CourseTable({ courses, onEdit, onDelete, onToggleActive,
                   <button
                     onClick={() => onAssignTeacher(course)}
                     className="p-1.5 bg-indigo-50/40 hover:bg-[#031553] hover:text-white text-[#031553] rounded-lg transition-all cursor-pointer border border-[#031553]/5"
-                    title="Asignar Docente a Sección"
+                    title="Asignar Docente al Curso"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />

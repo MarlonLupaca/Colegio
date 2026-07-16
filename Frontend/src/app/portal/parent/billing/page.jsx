@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   CreditCard, 
   DollarSign, 
@@ -88,9 +88,14 @@ export default function BillingPage() {
     }
   };
 
+  const today = useMemo(() => new Date(), []);
+
   useEffect(() => {
     if (selectedChildId) {
-      fetchCharges(selectedChildId);
+      const timer = setTimeout(() => {
+        fetchCharges(selectedChildId);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [selectedChildId]);
 
@@ -110,7 +115,7 @@ export default function BillingPage() {
   
   const nextDue = pendingCharges.length > 0 
     ? pendingCharges.reduce((earliest, current) => {
-        return new Date(current.dueDate || Date.now()) < new Date(earliest.dueDate || Date.now()) ? current : earliest;
+        return new Date(current.dueDate || today) < new Date(earliest.dueDate || today) ? current : earliest;
       })
     : null;
 

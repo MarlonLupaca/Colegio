@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   BookOpenCheck,
   ArrowLeft,
@@ -48,14 +48,18 @@ function UploadModal({ isOpen, onClose, week, courseId, codigoDocente, onSuccess
   const [descripcion, setDesc] = useState('');
   const [esPublico, setPublico] = useState(true);
   const [submitting, setSub] = useState(false);
+  const [errors, setErrors] = useState({});
   const fileRef = useRef();
 
   useEffect(() => {
     if (!isOpen) {
-      setFile(null);
-      setTitulo('');
-      setDesc('');
-      setPublico(true);
+      setTimeout(() => {
+        setFile(null);
+        setTitulo('');
+        setDesc('');
+        setPublico(true);
+        setErrors({});
+      }, 0);
     }
   }, [isOpen]);
 
@@ -70,14 +74,25 @@ function UploadModal({ isOpen, onClose, week, courseId, codigoDocente, onSuccess
       return;
     }
     setFile(f);
+    if (errors.file) setErrors(prev => ({ ...prev, file: null }));
     if (!titulo) setTitulo(f.name.replace(/\.[^.]+$/, ''));
   };
 
   const handleSubmit = async () => {
-    if (!file || !titulo.trim()) {
-      showToast('Selecciona un archivo y agrega un título.', 'error');
+    const newErrors = {};
+    if (!file) newErrors.file = 'Debe seleccionar un archivo';
+    if (!titulo.trim()) {
+      newErrors.titulo = 'El título es obligatorio';
+    } else if (titulo.trim().length < 3) {
+      newErrors.titulo = 'El título debe tener al menos 3 caracteres';
+    }
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      showToast('Por favor complete los campos requeridos.', 'error');
       return;
     }
+
     setSub(true);
     try {
       const metadata = { titulo, descripcion, courseId, weekId: week.id, codigoDocente, esPublico };
@@ -127,34 +142,37 @@ function UploadModal({ isOpen, onClose, week, courseId, codigoDocente, onSuccess
         <div className="p-5 space-y-4 overflow-y-auto">
           {/* Drop zone */}
           {!file ? (
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragOver(false);
-                if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-              }}
-              onClick={() => fileRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center cursor-pointer transition-all ${
-                dragOver
-                  ? 'border-[#031553] bg-[#031553]/5'
-                  : 'border-gray-200 hover:border-[#031553]/40 hover:bg-gray-50'
-              }`}
-            >
-              <Upload className="w-7 h-7 text-gray-300 mb-2" />
-              <p className="text-xs font-bold text-gray-500">Arrastra o haz clic para seleccionar</p>
-              <p className="text-[10px] text-gray-400 mt-1">PDF · DOCX · XLSX · Máx 20MB</p>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".pdf,.docx,.xlsx"
-                className="hidden"
-                onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])}
-              />
+            <div>
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+                }}
+                onClick={() => fileRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center cursor-pointer transition-all ${
+                  dragOver
+                    ? 'border-[#031553] bg-[#031553]/5'
+                    : errors.file ? 'border-rose-400 bg-rose-50/10' : 'border-gray-200 hover:border-[#031553]/40 hover:bg-gray-50'
+                }`}
+              >
+                <Upload className="w-7 h-7 text-gray-300 mb-2" />
+                <p className="text-xs font-bold text-gray-500">Arrastra o haz clic para seleccionar</p>
+                <p className="text-[10px] text-gray-400 mt-1">PDF · DOCX · XLSX · Máx 20MB</p>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".pdf,.docx,.xlsx"
+                  className="hidden"
+                  onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])}
+                />
+              </div>
+              {errors.file && <p className="text-[10px] text-rose-600 font-bold mt-1 text-center">{errors.file}</p>}
             </div>
           ) : (
             <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
@@ -176,11 +194,17 @@ function UploadModal({ isOpen, onClose, week, courseId, codigoDocente, onSuccess
               Título <span className="text-red-400">*</span>
             </label>
             <input
-              className="w-full border border-gray-200 rounded-xl py-2 px-3 text-xs outline-none focus:border-[#031553] transition-all"
+              className={`w-full border rounded-xl py-2 px-3 text-xs outline-none focus:border-[#031553] transition-all ${
+                errors.titulo ? 'border-rose-400 ring-1 ring-rose-200' : 'border-gray-200'
+              }`}
               value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
+              onChange={(e) => {
+                setTitulo(e.target.value);
+                if (errors.titulo) setErrors(prev => ({ ...prev, titulo: null }));
+              }}
               placeholder="Ej: Guía de ejercicios Semana 3"
             />
+            {errors.titulo && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.titulo}</p>}
           </div>
 
           <div>
@@ -246,11 +270,7 @@ function WeekRow({ week, courseId, codigoDocente, expanded, onToggle, materialCo
   const [loadingMats, setLoadingM] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  useEffect(() => {
-    if (expanded && materials.length === 0) loadMaterials();
-  }, [expanded]);
-
-  const loadMaterials = async () => {
+  const loadMaterials = useCallback(async () => {
     setLoadingM(true);
     try {
       const data = await apiFetch(`/api/v1/materials/week/${week.id}`);
@@ -260,7 +280,16 @@ function WeekRow({ week, courseId, codigoDocente, expanded, onToggle, materialCo
     } finally {
       setLoadingM(false);
     }
-  };
+  }, [week.id]);
+
+  useEffect(() => {
+    if (expanded && materials.length === 0) {
+      const timer = setTimeout(() => {
+        loadMaterials();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [expanded, materials.length, loadMaterials]);
 
   const handleDownload = async (m) => {
     try {
@@ -539,14 +568,7 @@ export default function MyCoursesPage() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCourse, setSelected] = useState(null);
-  const [codigoDocente, setCodigo] = useState('');
-
-  useEffect(() => {
-    // Obtener exactamente la cookie 'userCode' mostrada en la captura
-    const userCode = cookies.get('userCode') || '';
-    setCodigo(userCode);
-    loadCourses(userCode);
-  }, []);
+  const [codigoDocente, setCodigo] = useState(() => typeof window !== 'undefined' ? cookies.get('userCode') || '' : '');
 
   const loadCourses = async (teacherCode) => {
     if (!teacherCode) {
@@ -564,6 +586,20 @@ export default function MyCoursesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (codigoDocente) {
+      const timer = setTimeout(() => {
+        loadCourses(codigoDocente);
+      }, 0);
+      return () => clearTimeout(timer);
+    } else {
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [codigoDocente]);
 
   if (selectedCourse) {
     return <CourseDetail course={selectedCourse} codigoDocente={codigoDocente} onBack={() => setSelected(null)} />;

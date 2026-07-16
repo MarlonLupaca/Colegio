@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BookOpen, X } from 'lucide-react';
+import { apiFetch } from '@/config/api';
 import { academicAreas } from '../data';
 
 const PRIMARIA_GRADES = [
@@ -30,6 +31,7 @@ const EDUCATION_LEVELS = [
 const EMPTY_FORM = {
   name: '',
   code: '',
+  teacherCode: '',
   academicArea: '',
   description: '',
   educationLevel: 'PRIMARIA',
@@ -43,25 +45,43 @@ const inputBase = 'w-full bg-slate-50 border rounded-xl py-2 px-3 text-xs text-p
 export default function CourseModal({ isOpen, onClose, onSubmit, formType, currentCourse, courses }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
-
+  const [teachers, setTeachers] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
-      if (formType === 'edit' && currentCourse) {
-        setFormData({
-          name: currentCourse.name || '',
-          code: currentCourse.code || '',
-          academicArea: currentCourse.academicArea || '',
-          description: currentCourse.description || '',
-          educationLevel: currentCourse.educationLevel?.toUpperCase() || 'PRIMARIA',
-          gradeLevel: currentCourse.gradeLevel?.toString() || '1',
-          hoursPerWeek: currentCourse.hoursPerWeek?.toString() || '4',
-          isActive: currentCourse.isActive ?? true,
-        });
-      } else {
-        setFormData(EMPTY_FORM);
-      }
-      setErrors({});
+      // Cargar docentes activos
+      apiFetch('/api/user/usuarios')
+        .then((users) => {
+          const activeTeachers = (users || []).filter(
+            (u) => u.rol === 'DOCENTE' && u.activo
+          );
+          setTeachers(activeTeachers);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        if (formType === 'edit' && currentCourse) {
+          setFormData({
+            name: currentCourse.name || '',
+            code: currentCourse.code || '',
+            teacherCode: currentCourse.teacherCode || '',
+            academicArea: currentCourse.academicArea || '',
+            description: currentCourse.description || '',
+            educationLevel: currentCourse.educationLevel?.toUpperCase() || 'PRIMARIA',
+            gradeLevel: currentCourse.gradeLevel?.toString() || '1',
+            hoursPerWeek: currentCourse.hoursPerWeek?.toString() || '4',
+            isActive: currentCourse.isActive ?? true,
+          });
+        } else {
+          setFormData(EMPTY_FORM);
+        }
+        setErrors({});
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, formType, currentCourse]);
 
@@ -83,7 +103,6 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
 
   const validate = () => {
     const e = {};
-    if (!formData.code.trim()) e.code = 'El código es obligatorio';
     if (!formData.name.trim()) e.name = 'El nombre es obligatorio';
     if (!formData.academicArea) e.academicArea = 'El área académica es obligatoria';
     if (!formData.hoursPerWeek || parseInt(formData.hoursPerWeek) <= 0)
@@ -124,33 +143,24 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-left overflow-y-auto max-h-[80vh]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Code */}
-            <div className="space-y-1 col-span-2">
-              <label className="text-[10px] font-bold text-secondary uppercase tracking-wide flex items-center gap-1.5">
-                Código del Curso *
-                {formType === 'edit' && (
+            {/* Code (Only visible in edit mode) */}
+            {formType === 'edit' && (
+              <div className="space-y-1 col-span-2">
+                <label className="text-[10px] font-bold text-secondary uppercase tracking-wide flex items-center gap-1.5">
+                  Código del Curso
                   <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full normal-case tracking-normal">
                     🔒 No editable
                   </span>
-                )}
-              </label>
-              <input
-                type="text"
-                name="code"
-                value={formData.code}
-                onChange={handleChange}
-                placeholder="Ej. REL-001, MAT-203"
-                disabled={formType === 'edit'}
-                className={`${inputBase} uppercase ${
-                  formType === 'edit'
-                    ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none'
-                    : errors.code
-                      ? 'border-rose-400 ring-1 ring-rose-200'
-                      : 'border-gray-200 focus:border-primary/40'
-                }`}
-              />
-              {errors.code && <p className="text-[10px] text-rose-600 font-bold">{errors.code}</p>}
-            </div>
+                </label>
+                <input
+                  type="text"
+                  name="code"
+                  value={formData.code}
+                  disabled
+                  className={`${inputBase} uppercase bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none`}
+                />
+              </div>
+            )}
             {/* Name */}
             <div className="space-y-1 col-span-2">
               <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Nombre del Curso *</label>
@@ -195,6 +205,24 @@ export default function CourseModal({ isOpen, onClose, onSubmit, formType, curre
                 ))}
               </select>
               {errors.academicArea && <p className="text-[10px] text-rose-600 font-bold">{errors.academicArea}</p>}
+            </div>
+
+            {/* Docente / Profesora */}
+            <div className="space-y-1 col-span-2">
+              <label className="text-[10px] font-bold text-secondary uppercase tracking-wide">Docente Responsable</label>
+              <select
+                name="teacherCode"
+                value={formData.teacherCode}
+                onChange={handleChange}
+                className={`${inputBase} cursor-pointer border-gray-200 focus:border-primary/40`}
+              >
+                <option value="">Sin docente asignado (Nulo)</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher.codigoUsuario} value={teacher.codigoUsuario}>
+                    {teacher.nombres} {teacher.apellidos} ({teacher.codigoUsuario})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Education Level */}

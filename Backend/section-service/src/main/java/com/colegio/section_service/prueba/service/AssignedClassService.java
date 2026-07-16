@@ -1,5 +1,7 @@
 package com.colegio.section_service.prueba.service;
 
+import com.colegio.section_service.prueba.entity.AnnualSections;
+import com.colegio.section_service.prueba.repository.AnnualSectionsRepository;
 import com.colegio.section_service.prueba.entity.AssignedClass;
 import com.colegio.section_service.prueba.repository.AssignedClassRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 @Service
 public class AssignedClassService {
@@ -16,27 +19,15 @@ public class AssignedClassService {
     private AssignedClassRepository assignedClassRepository;
 
     @Autowired
+    private AnnualSectionsRepository annualSectionsRepository;
+
+    @Autowired
     private org.springframework.web.client.RestTemplate restTemplate;
 
     private void populateDetails(AssignedClass assignedClass) {
-        // 1. Resolver Nombre del Docente
-        if (assignedClass.getTeacherId() == null) {
-            assignedClass.setTeacherName("Sin docente asignado");
-        } else {
-            try {
-                String url = "http://localhost:8082/api/user/usuarios/buscar-id/" + assignedClass.getTeacherId();
-                java.util.Map<?, ?> response = restTemplate.getForObject(url, java.util.Map.class);
-                if (response != null && response.get("nombres") != null && response.get("apellidos") != null) {
-                    assignedClass.setTeacherName(response.get("nombres") + " " + response.get("apellidos"));
-                } else {
-                    assignedClass.setTeacherName("Profesor ID: " + assignedClass.getTeacherId());
-                }
-            } catch (Exception e) {
-                assignedClass.setTeacherName("Profesor ID: " + assignedClass.getTeacherId());
-            }
-        }
+        String teacherCode = null;
 
-        // 2. Resolver Nombre y Código del Curso
+        // 1. Resolver Curso
         if (assignedClass.getCourseId() == null) {
             assignedClass.setCourseName("Curso Académico");
             assignedClass.setCourseCode("CUR-XXXX");
@@ -51,10 +42,34 @@ public class AssignedClassService {
                     if (response.get("code") != null) {
                         assignedClass.setCourseCode((String) response.get("code"));
                     }
+                    if (response.get("teacherCode") != null) {
+                        teacherCode = (String) response.get("teacherCode");
+                        assignedClass.setTeacherCode(teacherCode);
+                    }
+                    if (response.get("hoursPerWeek") != null) {
+                        assignedClass.setHoursPerWeek(((Number) response.get("hoursPerWeek")).intValue());
+                    }
                 }
             } catch (Exception e) {
                 assignedClass.setCourseName("Curso ID: " + assignedClass.getCourseId());
                 assignedClass.setCourseCode("CUR-XXXX");
+            }
+        }
+
+        // 2. Resolver Nombre del Docente usando su teacherCode
+        if (teacherCode == null || teacherCode.trim().isEmpty()) {
+            assignedClass.setTeacherName("Sin docente asignado");
+        } else {
+            try {
+                String url = "http://localhost:8082/api/user/usuarios/" + teacherCode;
+                java.util.Map<?, ?> response = restTemplate.getForObject(url, java.util.Map.class);
+                if (response != null && response.get("nombres") != null && response.get("apellidos") != null) {
+                    assignedClass.setTeacherName(response.get("nombres") + " " + response.get("apellidos"));
+                } else {
+                    assignedClass.setTeacherName("Docente: " + teacherCode);
+                }
+            } catch (Exception e) {
+                assignedClass.setTeacherName("Docente: " + teacherCode);
             }
         }
     }
@@ -65,16 +80,46 @@ public class AssignedClassService {
         }
     }
 
+    private int getCourseHours(UUID courseId) {
+        try {
+            Map<?, ?> course = restTemplate.getForObject("http://localhost:8089/api/v1/courses/" + courseId, Map.class);
+            if (course != null && course.get("hoursPerWeek") != null) {
+                return ((Number) course.get("hoursPerWeek")).intValue();
+            }
+        } catch (Exception e) {
+            // Log warning or return a default of 0
+        }
+        return 0;
+    }
+
     public AssignedClass createAssignedClass(AssignedClass assignedClass) {
         if (assignedClass.getAnnualSections() != null && assignedClass.getAnnualSections().getId() != null) {
+            UUID sectionId = assignedClass.getAnnualSections().getId();
             boolean alreadyExists = assignedClassRepository.existsByAnnualSectionsIdAndCourseId(
-                    assignedClass.getAnnualSections().getId(),
+                    sectionId,
                     assignedClass.getCourseId()
             );
 
             if (alreadyExists) {
                 throw new IllegalArgumentException(
                         "Este curso ya está asignado a esa sección.");
+            }
+
+            AnnualSections section = annualSectionsRepository.findById(sectionId)
+                    .orElseThrow(() -> new EntityNotFoundException("Sección no encontrada con ID: " + sectionId));
+
+            int maxWeeklyHours = section.getMaxWeeklyHours() != null ? section.getMaxWeeklyHours() : 30;
+
+            List<AssignedClass> existingClasses = assignedClassRepository.findByAnnualSectionsId(sectionId);
+            int currentTotalHours = existingClasses.stream()
+                    .mapToInt(ac -> getCourseHours(ac.getCourseId()))
+                    .sum();
+
+            int courseHours = getCourseHours(assignedClass.getCourseId());
+            if (currentTotalHours + courseHours > maxWeeklyHours) {
+                throw new IllegalArgumentException(
+                        "No se puede matricular el curso con " + courseHours + 
+                        " horas. Superaría el límite máximo de la sección que es de " + maxWeeklyHours + " horas semanales (Total actual: " + currentTotalHours + " horas).");
             }
         }
 
@@ -127,5 +172,46 @@ public class AssignedClassService {
 
     public void deleteAssignedClass(UUID id) {
         assignedClassRepository.delete(getAssignedClassById(id));
+    }
+
+    @jakarta.transaction.Transactional
+    public List<AssignedClass> addCoursesToSectionBatch(UUID sectionId, List<UUID> courseIds) {
+        AnnualSections section = annualSectionsRepository.findById(sectionId)
+                .orElseThrow(() -> new EntityNotFoundException("Sección no encontrada con ID: " + sectionId));
+
+        int maxWeeklyHours = section.getMaxWeeklyHours() != null ? section.getMaxWeeklyHours() : 30;
+
+        // Calculate current total hours
+        List<AssignedClass> existingClasses = assignedClassRepository.findByAnnualSectionsId(sectionId);
+        int currentTotalHours = existingClasses.stream()
+                .mapToInt(ac -> getCourseHours(ac.getCourseId()))
+                .sum();
+
+        List<AssignedClass> newlyCreated = new java.util.ArrayList<>();
+        int runningTotal = currentTotalHours;
+
+        for (UUID courseId : courseIds) {
+            if (courseId == null) continue;
+            boolean alreadyExists = assignedClassRepository.existsByAnnualSectionsIdAndCourseId(sectionId, courseId);
+            if (alreadyExists) continue;
+
+            int courseHours = getCourseHours(courseId);
+            if (runningTotal + courseHours > maxWeeklyHours) {
+                throw new IllegalArgumentException(
+                        "No se puede matricular el curso con " + courseHours + 
+                        " horas. Superaría el límite máximo de la sección que es de " + maxWeeklyHours + " horas semanales (Total actual: " + runningTotal + " horas).");
+            }
+
+            AssignedClass ac = new AssignedClass();
+            ac.setAnnualSections(section);
+            ac.setCourseId(courseId);
+            ac.setTeacherId(null);
+            AssignedClass saved = assignedClassRepository.save(ac);
+            populateDetails(saved);
+            newlyCreated.add(saved);
+            runningTotal += courseHours;
+        }
+
+        return newlyCreated;
     }
 }

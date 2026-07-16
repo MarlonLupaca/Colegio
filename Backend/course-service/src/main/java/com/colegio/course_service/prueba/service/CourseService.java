@@ -96,6 +96,7 @@ public class CourseService {
         course.setEducationLevel(courseDetails.getEducationLevel());
         course.setGradeLevel(courseDetails.getGradeLevel());
         course.setAcademicArea(courseDetails.getAcademicArea());
+        course.setTeacherCode(courseDetails.getTeacherCode());
 
         // Validación extra por si cambian a secundaria con grado > 5 en la actualización
         if (EducationLevel.SECUNDARIA.equals(course.getEducationLevel()) && course.getGradeLevel() > 5) {
@@ -139,46 +140,32 @@ public class CourseService {
     private org.springframework.web.client.RestTemplate restTemplate;
 
     public List<Course> getCoursesByTeacher(String teacherCodeOrId) {
-        Long teacherId;
+        if (teacherCodeOrId == null || teacherCodeOrId.trim().isEmpty()) {
+            return List.of();
+        }
+
+        String teacherCode = teacherCodeOrId;
         try {
-            // Intentar parsear como número directamente (si es el ID)
-            teacherId = Long.parseLong(teacherCodeOrId);
-        } catch (NumberFormatException e) {
-            // Si tiene letras (ej: DC20260001), consultar a user-service para obtener su ID numérico
-            String userUrl = "http://localhost:8082/api/user/usuarios/" + teacherCodeOrId;
+            Long.parseLong(teacherCodeOrId); // Si no lanza excepción, es un ID numérico
+            String userUrl = "http://localhost:8082/api/user/usuarios/buscar-id/" + teacherCodeOrId;
             try {
                 java.util.Map<?, ?> userResponse = restTemplate.getForObject(userUrl, java.util.Map.class);
-                if (userResponse != null && userResponse.get("id") != null) {
-                    teacherId = Long.valueOf(userResponse.get("id").toString());
-                } else {
-                    return List.of();
+                if (userResponse != null && userResponse.get("codigoUsuario") != null) {
+                    teacherCode = userResponse.get("codigoUsuario").toString();
                 }
             } catch (Exception ex) {
-                throw new RuntimeException("Error al resolver el código del docente con user-service: " + ex.getMessage(), ex);
+                // Si falla la llamada externa, continuar con el original
             }
+        } catch (NumberFormatException e) {
+            // Ya es un código de docente (tipo DC20260001)
         }
 
-        String url = "http://localhost:8100/api/v1/assigned-classes/teacher/" + teacherId;
-        try {
-            List<?> assignedList = restTemplate.getForObject(url, List.class);
-            if (assignedList == null || assignedList.isEmpty()) {
-                return List.of();
-            }
-            List<UUID> courseIds = assignedList.stream()
-                .map(obj -> {
-                    if (obj instanceof java.util.Map) {
-                        String courseIdStr = (String) ((java.util.Map<?, ?>) obj).get("courseId");
-                        return UUID.fromString(courseIdStr);
-                    }
-                    return null;
-                })
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
+        return courseRepository.findByTeacherCode(teacherCode);
+    }
 
-            return courseRepository.findAllById(courseIds);
-        } catch (Exception e) {
-            throw new RuntimeException("Error al consultar las clases asignadas del docente: " + e.getMessage(), e);
-        }
+    public Course assignTeacher(UUID id, String teacherCode) {
+        Course course = getCourseById(id);
+        course.setTeacherCode(teacherCode != null && !teacherCode.trim().isEmpty() ? teacherCode : null);
+        return courseRepository.save(course);
     }
 }

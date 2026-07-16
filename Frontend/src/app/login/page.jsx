@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [formErrors, setFormErrors] = useState({});
 
   // Auto-fill values when role tab changes
   const handleRoleChange = (newRole) => {
@@ -36,6 +37,17 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
+
+    // Validación de campos antes de enviar
+    const errs = {};
+    if (!username.trim()) errs.username = 'El código de usuario es obligatorio';
+    if (!password) errs.password = 'La contraseña es obligatoria';
+    else if (password.length < 4) errs.password = 'La contraseña debe tener al menos 4 caracteres';
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      setLoading(false);
+      return;
+    }
 
     try {
       // Petición real al API Gateway /auth-service
@@ -190,10 +202,16 @@ export default function LoginPage() {
                 type="text"
                 required
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (formErrors.username) setFormErrors(prev => ({ ...prev, username: null }));
+                }}
                 placeholder="Ingresa tu código"
-                className="w-full bg-transparent text-[#031553] focus:outline-none text-sm py-1 placeholder:text-gray-300"
+                className={`w-full bg-transparent focus:outline-none text-sm py-1 placeholder:text-gray-300 ${
+                  formErrors.username ? 'text-rose-600' : 'text-[#031553]'
+                }`}
               />
+              {formErrors.username && <p className="text-[10px] text-rose-600 font-bold mt-0.5">{formErrors.username}</p>}
             </div>
 
             {/* Password Input with bottom border and forgot link inline */}
@@ -209,9 +227,14 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (formErrors.password) setFormErrors(prev => ({ ...prev, password: null }));
+                  }}
                   placeholder="••••••••"
-                  className="w-full bg-transparent text-[#031553] focus:outline-none text-sm py-1 pr-8 placeholder:text-gray-300"
+                  className={`w-full bg-transparent focus:outline-none text-sm py-1 pr-8 placeholder:text-gray-300 ${
+                    formErrors.password ? 'text-rose-600' : 'text-[#031553]'
+                  }`}
                 />
                 <button
                   type="button"
@@ -221,6 +244,7 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {formErrors.password && <p className="text-[10px] text-rose-600 font-bold mt-0.5">{formErrors.password}</p>}
             </div>
 
             {/* Action Button */}

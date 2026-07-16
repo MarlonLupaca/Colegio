@@ -13,12 +13,18 @@ export default function EnrollmentForm({ students, sections, onEnrollSuccess }) 
   const [selectedStudent, setSelectedStudent] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handleEnroll = async (e) => {
     e.preventDefault();
 
-    if (!selectedStudent || !selectedSection) {
-      showToast('Debe seleccionar un estudiante y una sección.', 'error');
+    const newErrors = {};
+    if (!selectedStudent) newErrors.selectedStudent = 'Debe seleccionar un estudiante';
+    if (!selectedSection) newErrors.selectedSection = 'Debe seleccionar una sección';
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      showToast('Por favor complete los campos requeridos.', 'error');
       return;
     }
 
@@ -73,8 +79,11 @@ export default function EnrollmentForm({ students, sections, onEnrollSuccess }) 
           <select
             required
             value={selectedStudent}
-            onChange={(e) => setSelectedStudent(e.target.value)}
-            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+            onChange={(e) => {
+              setSelectedStudent(e.target.value);
+              if (errors.selectedStudent) setErrors(prev => ({ ...prev, selectedStudent: null }));
+            }}
+            className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${errors.selectedStudent ? 'border-rose-500 ring-1 ring-rose-200' : 'border-gray-200'}`}
           >
             <option value="">Seleccione un alumno...</option>
             {students.map((st) => (
@@ -83,6 +92,7 @@ export default function EnrollmentForm({ students, sections, onEnrollSuccess }) 
               </option>
             ))}
           </select>
+          {errors.selectedStudent && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.selectedStudent}</p>}
         </div>
 
         <div>
@@ -90,8 +100,11 @@ export default function EnrollmentForm({ students, sections, onEnrollSuccess }) 
           <select
             required
             value={selectedSection}
-            onChange={(e) => setSelectedSection(e.target.value)}
-            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#031553] outline-none text-[#031553]"
+            onChange={(e) => {
+              setSelectedSection(e.target.value);
+              if (errors.selectedSection) setErrors(prev => ({ ...prev, selectedSection: null }));
+            }}
+            className={`w-full p-2.5 bg-gray-50 border rounded-xl focus:border-[#031553] outline-none text-[#031553] ${errors.selectedSection ? 'border-rose-500 ring-1 ring-rose-200' : 'border-gray-200'}`}
           >
             <option value="">Seleccione una sección...</option>
             {sections.map((sec) => (
@@ -100,6 +113,7 @@ export default function EnrollmentForm({ students, sections, onEnrollSuccess }) 
               </option>
             ))}
           </select>
+          {errors.selectedSection && <p className="text-[10px] text-rose-600 font-bold mt-1">{errors.selectedSection}</p>}
         </div>
 
         <div className="flex justify-end pt-2">
